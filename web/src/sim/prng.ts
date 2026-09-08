@@ -1,4 +1,4 @@
-/** Seeded PRNG (mulberry32). The demo never calls Math.random so every run is identical. */
+/** Seeded PRNG (mulberry32). The demo never draws from the browser's random source, so every run is identical. */
 export function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
   return () => {
