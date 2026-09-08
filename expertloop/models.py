@@ -192,6 +192,7 @@ class TestRun(Base):
     passed: Mapped[int] = mapped_column(Integer)
     failed: Mapped[int] = mapped_column(Integer)
     results: Mapped[list[dict[str, Any]]] = mapped_column(JSONB)
+    coverage: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     instruction_set: Mapped[InstructionSet] = relationship(back_populates="test_runs")

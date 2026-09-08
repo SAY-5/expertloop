@@ -33,6 +33,8 @@ class ExecutionTrace:
     outcomes: list[str] = field(default_factory=list)
     skipped: list[str] = field(default_factory=list)
     halted_at: str | None = None
+    steps_executed: list[str] = field(default_factory=list)
+    rules_fired_ids: list[str] = field(default_factory=list)  # "global:0", "s3:0"
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -42,6 +44,8 @@ class ExecutionTrace:
             "outcomes": self.outcomes,
             "skipped": self.skipped,
             "halted_at": self.halted_at,
+            "steps_executed": self.steps_executed,
+            "rules_fired_ids": self.rules_fired_ids,
         }
 
 
@@ -119,9 +123,10 @@ def _apply_rules(
     rules: list[dict[str, Any]], scenario: dict[str, Any], trace: ExecutionTrace, label: str
 ) -> bool:
     """Fire matching rules. Return True when execution must halt."""
-    for rule in rules:
+    for index, rule in enumerate(rules):
         if evaluate_condition(rule["condition"], scenario):
             trace.rules_fired.append(f"{label}: if {rule['condition']} then {rule['then']}")
+            trace.rules_fired_ids.append(f"{label}:{index}")
             trace.actions.append(rule["then"])
             if rule.get("halts") or any(w in rule["then"].lower() for w in STOP_WORDS):
                 trace.halted_at = label
@@ -139,6 +144,7 @@ def execute(document: dict[str, Any], scenario: dict[str, Any]) -> ExecutionTrac
             continue
         if _apply_rules(step.get("decision_rules", []), scenario, trace, step["id"]):
             return trace
+        trace.steps_executed.append(step["id"])
         trace.actions.append(step["action"])
         if step.get("tool"):
             trace.tool_calls.append(step["tool"])

@@ -14,6 +14,7 @@ from expertloop.auth import Principal
 from expertloop.compiler import compile_note
 from expertloop.compiler.compile import citation_coverage, render_prompt, validate_document
 from expertloop.executor import run_test_case
+from expertloop.executor.coverage import coverage_report, coverage_summary
 from expertloop.models import (
     AuditEvent,
     Edit,
@@ -548,6 +549,7 @@ def run_tests(session: Session, actor: Principal, instruction_set_id: int) -> Te
         results.append({"test_case_id": case.id, "name": case.name, **outcome})
     passed = sum(1 for r in results if r["passed"])
     failed = len(results) - passed
+    coverage = coverage_summary(coverage_of(instruction_set))
     run = TestRun(
         instruction_set_id=instruction_set.id,
         version=instruction_set.version,
@@ -556,6 +558,7 @@ def run_tests(session: Session, actor: Principal, instruction_set_id: int) -> Te
         passed=passed,
         failed=failed,
         results=results,
+        coverage=coverage,
     )
     session.add(run)
     metrics.test_runs_total.labels(status=run.status).inc()
@@ -569,9 +572,17 @@ def run_tests(session: Session, actor: Principal, instruction_set_id: int) -> Te
         status=run.status,
         passed=passed,
         failed=failed,
+        coverage=coverage,
     )
     session.commit()
     return run
+
+
+def coverage_of(instruction_set: InstructionSet) -> dict[str, Any]:
+    """Coverage of the current document by its test cases, computed fresh."""
+    return coverage_report(
+        instruction_set.document, [(c.name, c.scenario) for c in instruction_set.test_cases]
+    )
 
 
 def latest_test_run(session: Session, instruction_set: InstructionSet) -> TestRun | None:

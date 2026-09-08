@@ -284,6 +284,21 @@ def run_tests(
     return service.run_tests(session, principal, instruction_set_id)
 
 
+@router.get("/{instruction_set_id}/coverage")
+def coverage(
+    instruction_set_id: int,
+    session: Session = Depends(get_session),
+    _: Principal = Depends(read_roles),
+) -> dict[str, Any]:
+    """Which steps and decision rules the test cases exercise on the current version."""
+    instruction_set = service.get_instruction_set(session, instruction_set_id)
+    return {
+        "instruction_set_id": instruction_set.id,
+        "version": instruction_set.version,
+        **service.coverage_of(instruction_set),
+    }
+
+
 @router.get("/{instruction_set_id}/test-runs", response_model=list[TestRunOut])
 def list_test_runs(
     instruction_set_id: int,

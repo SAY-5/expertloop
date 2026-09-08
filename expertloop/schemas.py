@@ -185,6 +185,7 @@ class TestRunOut(BaseModel):
     passed: int
     failed: int
     results: list[dict[str, Any]]
+    coverage: dict[str, Any]
     created_at: datetime
 
 
