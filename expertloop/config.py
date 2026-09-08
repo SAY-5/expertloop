@@ -26,6 +26,8 @@ class Settings(BaseSettings):
     jira_issue_key: str = "OPS-42"
     jira_token: str = "fake-token"
     default_required_approvals: int = Field(default=1, ge=1)
+    # seconds between scheduled drift scans of every source; 0 disables the scheduler
+    drift_check_interval_seconds: int = Field(default=0, ge=0)
 
     def parsed_api_keys(self) -> list[ApiKey]:
         out: list[ApiKey] = []

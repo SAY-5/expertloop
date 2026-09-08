@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Sequence
+from collections.abc import AsyncIterator, Sequence
+from contextlib import asynccontextmanager
 
 import httpx
 import structlog
@@ -14,7 +15,8 @@ from sqlalchemy.orm import Session
 
 from expertloop import __version__, metrics
 from expertloop.config import ApiKey, Settings, get_settings
-from expertloop.db import get_session
+from expertloop.db import get_session, session_factory
+from expertloop.drift import DriftScheduler
 from expertloop.routers import instruction_sets, notes, sources
 from expertloop.service import Conflict, Invalid, NotFound
 from expertloop.targets import JiraTarget, Target, WebhookTarget
@@ -51,9 +53,21 @@ def create_app(
 ) -> FastAPI:
     configure_logging()
     settings = settings or get_settings()
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        scheduler = DriftScheduler(session_factory(), settings.drift_check_interval_seconds)
+        app.state.drift_scheduler = scheduler
+        scheduler.start()
+        try:
+            yield
+        finally:
+            scheduler.stop()
+
     app = FastAPI(
         title="ExpertLoop",
         version=__version__,
+        lifespan=lifespan,
         description=(
             "Turns expert task notes into agent instructions with linked sources, tracks edits "
             "and approval state in PostgreSQL, and gates approved workflows behind test cases "
