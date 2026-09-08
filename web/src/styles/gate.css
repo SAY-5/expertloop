@@ -50,6 +50,8 @@
 .case-status {
   font-size: 0.68rem;
   letter-spacing: 0.1em;
+  white-space: nowrap;
+  flex: none;
   padding: 3px 8px;
   border-radius: 6px;
   border: 1px solid var(--line-strong);
@@ -428,5 +430,6 @@
 
   .gate-side {
     position: static;
+    order: -1;
   }
 }
