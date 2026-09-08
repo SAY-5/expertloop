@@ -1,0 +1,358 @@
+/* Hero and the shared note paper. */
+
+.hero {
+  position: relative;
+  padding: 22px 0 clamp(64px, 9vw, 120px);
+  overflow: hidden;
+}
+
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: -20% -10% auto;
+  height: 70%;
+  background: radial-gradient(60% 60% at 70% 30%, rgba(224, 79, 214, 0.22), transparent 70%);
+  filter: blur(40px);
+  pointer-events: none;
+}
+
+.hero-inner {
+  position: relative;
+}
+
+.hero-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0 clamp(48px, 7vw, 96px);
+}
+
+.hero-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--display);
+  font-size: 1.5rem;
+  color: var(--text);
+  text-decoration: none;
+  letter-spacing: 0.01em;
+}
+
+.hero-mark {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 3px solid var(--plum);
+  box-shadow: 0 0 18px var(--plum-glow);
+}
+
+.hero-links {
+  display: flex;
+  gap: 22px;
+}
+
+.hero-links a {
+  color: var(--text-dim);
+  text-decoration: none;
+  font-size: 0.92rem;
+  letter-spacing: 0.02em;
+}
+
+.hero-links a:hover {
+  color: var(--text);
+}
+
+.hero-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  gap: clamp(32px, 5vw, 72px);
+  align-items: center;
+}
+
+.hero-title {
+  font-size: clamp(3rem, 6.6vw, 6rem);
+  margin: 18px 0 24px;
+  text-wrap: balance;
+}
+
+.hero-title em {
+  font-style: italic;
+  color: var(--plum);
+  text-shadow: 0 0 40px var(--plum-glow);
+}
+
+.hero-lede {
+  color: var(--text-dim);
+  font-size: 1.1rem;
+  max-width: 52ch;
+}
+
+.hero-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 36px 0 28px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.hero-stat {
+  display: grid;
+  gap: 2px;
+}
+
+.hero-stat-value {
+  font-family: var(--display);
+  font-size: clamp(1.9rem, 3.4vw, 2.8rem);
+  line-height: 1;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.hero-stat-label {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-mute);
+}
+
+.hero-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.hero-actions .btn {
+  text-decoration: none;
+}
+
+.hero-visual {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 56px minmax(0, 1.1fr);
+  align-items: start;
+  perspective: 1200px;
+}
+
+.hero-note {
+  transform: rotateY(6deg) rotateX(2deg);
+  transform-origin: right center;
+}
+
+.hero-beam svg {
+  width: 100%;
+  height: 100%;
+  min-height: 420px;
+  overflow: visible;
+}
+
+.hero-steps {
+  padding: 18px 18px 14px;
+  transform: rotateY(-5deg);
+  transform-origin: left center;
+  min-height: 420px;
+}
+
+.hero-steps-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 8px;
+}
+
+.hero-step-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.hero-step {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 4px 10px;
+  padding: 10px 8px;
+  border-radius: 12px;
+  background: rgba(255, 233, 250, 0.03);
+  border: 1px solid transparent;
+}
+
+.hero-step:last-child {
+  border-color: rgba(224, 79, 214, 0.4);
+  background: var(--plum-soft);
+}
+
+.hero-step-id {
+  color: var(--plum);
+  font-size: 0.72rem;
+  padding-top: 3px;
+}
+
+.hero-step-action {
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
+.hero-step-action em {
+  color: var(--warn);
+  font-style: italic;
+}
+
+.hero-step-cites {
+  grid-column: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+/* Note paper */
+
+.note-paper {
+  overflow: hidden;
+  font-family: var(--body);
+}
+
+.note-topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--paper-line);
+  font-size: 0.78rem;
+  color: var(--paper-mute);
+}
+
+.note-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--plum);
+}
+
+.note-file {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.note-count {
+  font-size: 0.68rem;
+}
+
+.note-lines {
+  list-style: none;
+  margin: 0;
+  padding: 10px 0 14px;
+}
+
+.note-line {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 8px;
+  padding: 2px 14px 2px 8px;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  transition:
+    background 0.3s var(--ease),
+    opacity 0.4s var(--ease);
+  border-left: 3px solid transparent;
+}
+
+.note-compact .note-line {
+  font-size: 0.74rem;
+  line-height: 1.38;
+  padding-top: 1px;
+  padding-bottom: 1px;
+}
+
+.note-num {
+  color: var(--paper-mute);
+  font-size: 0.66rem;
+  text-align: right;
+  padding-top: 3px;
+  user-select: none;
+}
+
+.note-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.note-h1 .note-text {
+  font-family: var(--display);
+  font-size: 1.25em;
+  line-height: 1.2;
+}
+
+.note-h2 .note-text {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 0.72em;
+  color: var(--plum-deep);
+  padding-top: 6px;
+}
+
+.note-blank {
+  min-height: 0.7em;
+}
+
+.note-hit {
+  background: rgba(224, 79, 214, 0.16);
+  border-left-color: var(--plum);
+}
+
+.note-dim {
+  opacity: 0.35;
+}
+
+.note-ref {
+  background: rgba(224, 79, 214, 0.18);
+  color: var(--plum-deep);
+  border-radius: 4px;
+  padding: 0 3px;
+  font-family: var(--mono);
+  font-size: 0.9em;
+}
+
+@media (max-width: 1000px) {
+  .hero-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-visual {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .hero-beam {
+    display: none;
+  }
+
+  .hero-note,
+  .hero-steps {
+    transform: none;
+  }
+
+  .hero-steps {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 600px) {
+  .hero-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px 10px;
+  }
+
+  .hero-links {
+    gap: 14px;
+  }
+}
