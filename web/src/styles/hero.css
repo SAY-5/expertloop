@@ -173,12 +173,17 @@
 
 .hero-step {
   display: grid;
-  grid-template-columns: 32px minmax(0, 1fr);
-  gap: 4px 10px;
-  padding: 10px 8px;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 3px 8px;
+  padding: 7px 8px;
   border-radius: 12px;
   background: rgba(255, 233, 250, 0.03);
   border: 1px solid transparent;
+}
+
+.hero-step .chip {
+  font-size: 0.62rem;
+  padding: 2px 7px;
 }
 
 .hero-step:last-child {
@@ -193,8 +198,8 @@
 }
 
 .hero-step-action {
-  font-size: 0.86rem;
-  line-height: 1.4;
+  font-size: 0.8rem;
+  line-height: 1.38;
 }
 
 .hero-step-action em {
