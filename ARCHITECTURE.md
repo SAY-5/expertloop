@@ -49,6 +49,18 @@ stored hashes with the registry's current hash. When a policy document is re-reg
 with new content, `GET /instruction-sets/{id}/citations` reports those citations as
 unverified instead of silently pointing at changed text.
 
+## Source drift
+
+`expertloop/drift.py` re-hashes a source (`rehash_source`) and compares each step's cited
+`source_hash` with the registry's current hash (`scan_drift`). A mismatch creates a
+`drift_flags` row per step and source and an audit event `drift_detected`; open flags
+make the set stale and `_publish_gate` refuses to publish it. A flag is resolved when an
+expert re-verifies the step (`POST /instruction-sets/{id}/drift/verify`) or edits it: an
+edit refreshes citation hashes only on steps that changed, so touching an unrelated step
+does not clear the flag. A step re-verified against a hash is not flagged again for that
+hash, but a further change to the source flags it anew. `DriftScheduler` runs the same
+scan on a background thread when `drift_check_interval_seconds` is set.
+
 ## Edits and optimistic concurrency
 
 An edit (`PATCH /instruction-sets/{id}`) sends the full document, a reason and

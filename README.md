@@ -42,6 +42,11 @@ Prometheus metrics.
 * **Reach business systems.** `publish` delivers the version snapshot to a signed webhook
   target and a Jira comment plus attachment target, records receipts per target, and
   `rollback` re-delivers the previous published version.
+* **Source drift detection.** Sources are re-hashed on demand (`POST /sources/{id}/rehash`,
+  `POST /sources/check-drift`, or re-registering with new content) or on a schedule
+  (`EXPERTLOOP_DRIFT_CHECK_INTERVAL_SECONDS`). When a hash changes, every step citing that
+  source is flagged `stale`; `GET /instruction-sets/{id}/drift` lists the flags and publish
+  is blocked until an expert re-verifies the steps or edits them.
 * API keys per role (`expert`, `reviewer`, `admin`), OpenAPI docs at `/docs`, Prometheus
   metrics at `/metrics`.
 
@@ -101,6 +106,8 @@ All endpoints take `X-API-Key`. `admin` may call everything.
 | --- | --- | --- | --- |
 | POST | `/sources` | expert | Register a source (`url`, `doc`, `ticket`) with optional content; returns its hash |
 | GET | `/sources` | expert, reviewer | List sources |
+| POST | `/sources/{id}/rehash` | expert, reviewer | Re-hash a source (optional new `content`); flags citing steps when the hash changed |
+| POST | `/sources/check-drift` | expert, reviewer | Re-scan every live instruction set against current source hashes |
 | POST | `/notes` | expert | Ingest a note and compile instruction set v1; returns coverage and sources linked |
 | GET | `/notes`, `/notes/{id}` | expert, reviewer | Read notes |
 | GET | `/instruction-sets` | expert, reviewer | List sets with state and versions |
@@ -108,6 +115,8 @@ All endpoints take `X-API-Key`. `admin` may call everything.
 | GET | `/instruction-sets/{id}/prompt` | expert, reviewer | Rendered agent prompt (text) |
 | GET | `/instruction-sets/{id}/citations` | expert, reviewer | Coverage plus per-citation hash verification |
 | GET | `/instruction-sets/{id}/versions` | expert, reviewer | Version snapshots |
+| GET | `/instruction-sets/{id}/drift` | expert, reviewer | Stale steps and open or resolved drift flags |
+| POST | `/instruction-sets/{id}/drift/verify` | expert | Re-verify stale steps (`step_ids`, or all) against the changed source |
 | PATCH | `/instruction-sets/{id}` | expert | Edit: `expected_version`, `reason`, full `document`; 409 on stale version, 422 on uncited steps |
 | GET | `/instruction-sets/{id}/edits` | expert, reviewer | Edit history with diffs |
 | POST | `/instruction-sets/{id}/submit` | expert | `draft` or `changes_requested` to `in_review` |
@@ -116,7 +125,7 @@ All endpoints take `X-API-Key`. `admin` may call everything.
 | POST | `/instruction-sets/{id}/test-cases` | expert, reviewer | Add a test case (`scenario`, `expectations`) |
 | POST | `/instruction-sets/{id}/run-tests` | expert, reviewer | Execute all cases on the current version |
 | GET | `/instruction-sets/{id}/test-cases`, `/test-runs` | expert, reviewer | Cases and recorded runs |
-| POST | `/instruction-sets/{id}/publish` | admin | Deliver to targets; 409 when not approved or latest run is not green |
+| POST | `/instruction-sets/{id}/publish` | admin | Deliver to targets; 409 when not approved, stale, or latest run is not green |
 | POST | `/instruction-sets/{id}/rollback` | admin | Re-deliver the previous published version |
 | POST | `/instruction-sets/{id}/retire` | admin | `published` to `retired` |
 | GET | `/instruction-sets/{id}/publications` | expert, reviewer | Delivery receipts |
@@ -132,7 +141,7 @@ Test case expectations: `required_actions`, `forbidden_actions`, `expected_outco
 
 | Table | Purpose |
 | --- | --- |
-| `sources` | `kind`, `ref`, optional content, `content_hash` (SHA-256), unique per kind and ref |
+| `sources` | `kind`, `ref`, optional content, `content_hash` (SHA-256), `last_checked_at`, unique per kind and ref |
 | `notes` | Raw expert notes with author |
 | `instruction_sets` | Head document (JSONB), `state`, `version`, `published_version`, `required_approvals`, `review_round` |
 | `instruction_set_versions` | Immutable document snapshot per version |
@@ -142,14 +151,16 @@ Test case expectations: `required_actions`, `forbidden_actions`, `expected_outco
 | `test_cases` | Name, author, scenario, expectations |
 | `test_runs` | Version covered, status, pass/fail counts, per-case results and traces |
 | `publications` | Version, action (`publish`, `rollback`), target, status, receipt |
+| `drift_flags` | Step, source, cited and current hash, detected by and at, resolution (`reverified`, `edited`) |
 
-Schema is managed by Alembic (`alembic/versions/0001_initial.py`).
+Schema is managed by Alembic (`alembic/versions/`).
 
 ## Configuration
 
 Environment variables (prefix `EXPERTLOOP_`, see `.env.example`): `DATABASE_URL`,
 `API_KEYS` (`name:role:key,...`), `WEBHOOK_URL`, `WEBHOOK_SECRET`, `JIRA_BASE_URL`,
-`JIRA_ISSUE_KEY`, `JIRA_TOKEN`, `DEFAULT_REQUIRED_APPROVALS`.
+`JIRA_ISSUE_KEY`, `JIRA_TOKEN`, `DEFAULT_REQUIRED_APPROVALS`, `DRIFT_CHECK_INTERVAL_SECONDS`
+(0 disables the scheduled scan).
 
 ## Layout
 
@@ -162,6 +173,7 @@ expertloop/
   targets/     signed webhook and Jira delivery adapters
   fakes/       fake webhook receiver and Jira for demos and tests
   routers/     FastAPI routes
+  drift.py     source re-hashing, drift flags and the scan scheduler
   service.py   audited business logic
   demo.py      end-to-end demo driver
 alembic/       migrations
@@ -172,6 +184,21 @@ tests/         pytest suite (PostgreSQL via Testcontainers)
 
 See `ARCHITECTURE.md` for the compiler, citation, state machine, gating and delivery
 design, and `CONTRIBUTING.md` for the development workflow.
+
+## Changelog
+
+### 2.0.0
+
+* Source drift detection: re-hash sources on demand or on a schedule, flag citing steps
+  as stale, block publish until an expert re-verifies or edits them, and report it all
+  through `GET /instruction-sets/{id}/drift`.
+* Migration `0002` adds `drift_flags` and `sources.last_checked_at`.
+
+### 1.0.0
+
+* Initial release: deterministic note compiler with citations, source registry with
+  hashes, edit history with optimistic concurrency, review state machine, test-case
+  publish gate, signed webhook and Jira targets, rollback.
 
 ## License
 
