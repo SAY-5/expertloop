@@ -34,6 +34,7 @@ class Source(Base):
     title: Mapped[str | None] = mapped_column(String(256))
     content: Mapped[str | None] = mapped_column(Text)
     content_hash: Mapped[str] = mapped_column(String(64))
+    last_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
@@ -85,6 +86,9 @@ class InstructionSet(Base):
     )
     publications: Mapped[list[Publication]] = relationship(
         back_populates="instruction_set", order_by="Publication.id"
+    )
+    drift_flags: Mapped[list[DriftFlag]] = relationship(
+        back_populates="instruction_set", order_by="DriftFlag.id"
     )
 
 
@@ -191,3 +195,28 @@ class Publication(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     instruction_set: Mapped[InstructionSet] = relationship(back_populates="publications")
+
+
+class DriftFlag(Base):
+    """A step whose cited source hash no longer matches the registry.
+
+    Open flags (``resolved_at`` is null) block publication. A flag is resolved when an
+    expert re-verifies the step against the changed source or edits the set so the
+    citation carries the current hash.
+    """
+
+    __tablename__ = "drift_flags"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    instruction_set_id: Mapped[int] = mapped_column(ForeignKey("instruction_sets.id"))
+    step_id: Mapped[str] = mapped_column(String(32))
+    source_id: Mapped[int] = mapped_column(ForeignKey("sources.id"))
+    cited_hash: Mapped[str] = mapped_column(String(64))
+    current_hash: Mapped[str] = mapped_column(String(64))
+    detected_by: Mapped[str] = mapped_column(String(128))
+    detected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    resolved_by: Mapped[str | None] = mapped_column(String(128))
+    resolution: Mapped[str | None] = mapped_column(String(16))  # reverified | edited
+
+    instruction_set: Mapped[InstructionSet] = relationship(back_populates="drift_flags")

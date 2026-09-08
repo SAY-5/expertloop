@@ -32,6 +32,7 @@ KEYS = {
 }
 
 TABLES = (
+    "drift_flags",
     "publications",
     "test_runs",
     "test_cases",
