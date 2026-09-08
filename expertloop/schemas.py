@@ -23,6 +23,7 @@ class SourceOut(BaseModel):
     ref: str
     title: str | None
     content_hash: str
+    last_checked_at: datetime | None
     created_at: datetime
 
 
@@ -182,3 +183,47 @@ class TransitionOut(BaseModel):
     instruction_set: InstructionSetSummary
     approvals: int
     required_approvals: int
+
+
+class RehashIn(BaseModel):
+    content: str | None = None
+
+
+class DriftFlagOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    instruction_set_id: int
+    step_id: str
+    source_id: int
+    cited_hash: str
+    current_hash: str
+    detected_by: str
+    detected_at: datetime
+    resolved_at: datetime | None
+    resolved_by: str | None
+    resolution: str | None
+
+
+class RehashOut(BaseModel):
+    source: SourceOut
+    changed: bool
+    flags: list[DriftFlagOut]
+
+
+class DriftScanOut(BaseModel):
+    flags: list[DriftFlagOut]
+    instruction_sets_flagged: int
+
+
+class DriftOut(BaseModel):
+    instruction_set_id: int
+    stale: bool
+    stale_steps: list[str]
+    open: int
+    resolved: int
+    flags: list[DriftFlagOut]
+
+
+class VerifyIn(BaseModel):
+    step_ids: list[str] | None = None

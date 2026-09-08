@@ -5,13 +5,15 @@ from fastapi.responses import PlainTextResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from expertloop import service
+from expertloop import drift, service
 from expertloop.auth import Principal, require_role
 from expertloop.compiler.compile import citation_coverage
 from expertloop.db import get_session
 from expertloop.models import InstructionSet, InstructionSetVersion
 from expertloop.schemas import (
     AuditOut,
+    DriftFlagOut,
+    DriftOut,
     EditIn,
     EditOut,
     InstructionSetOut,
@@ -24,6 +26,7 @@ from expertloop.schemas import (
     TestCaseOut,
     TestRunOut,
     TransitionOut,
+    VerifyIn,
 )
 from expertloop.sources import verify_citations
 
@@ -71,6 +74,26 @@ def get_citations(
         "unverified": sum(1 for r in report if not r["verified"]),
         "citations": report,
     }
+
+
+@router.get("/{instruction_set_id}/drift", response_model=DriftOut)
+def get_drift(
+    instruction_set_id: int,
+    session: Session = Depends(get_session),
+    _: Principal = Depends(read_roles),
+) -> DriftOut:
+    instruction_set = service.get_instruction_set(session, instruction_set_id)
+    return DriftOut(**drift.drift_report(session, instruction_set))
+
+
+@router.post("/{instruction_set_id}/drift/verify", response_model=list[DriftFlagOut])
+def verify_drift(
+    instruction_set_id: int,
+    body: VerifyIn,
+    session: Session = Depends(get_session),
+    principal: Principal = Depends(require_role("expert")),
+) -> Any:
+    return service.reverify(session, principal, instruction_set_id, body.step_ids)
 
 
 @router.get("/{instruction_set_id}/versions")
