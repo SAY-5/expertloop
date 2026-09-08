@@ -134,6 +134,8 @@ def test_rollback_redelivers_previous_version(client, fakes):
         f"/instruction-sets/{set_id}/publications", headers=headers("reviewer")
     ).json()
     assert len(publications) == 6
+    overview = client.get("/ops/overview", headers=headers("reviewer")).json()["publish"]
+    assert (overview["delivered"], overview["rollbacks"], overview["published_sets"]) == (4, 1, 1)
     retired = client.post(f"/instruction-sets/{set_id}/retire", headers=headers("admin"))
     assert retired.json()["instruction_set"]["state"] == "retired"
 

@@ -56,11 +56,7 @@ def overview(
         ).all()
     )
     blocked = session.scalar(select(func.count()).where(AuditEvent.action == "publish_blocked"))
-    rollbacks = session.scalar(
-        select(
-            func.count(func.distinct(Publication.instruction_set_id, Publication.created_at))
-        ).where(Publication.action == "rollback")
-    )
+    rollbacks = session.scalar(select(func.count()).where(AuditEvent.action == "rollback"))
 
     def average(values: list[float]) -> float | None:
         return round(sum(values) / len(values), 3) if values else None
