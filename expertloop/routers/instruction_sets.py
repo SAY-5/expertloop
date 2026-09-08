@@ -18,6 +18,7 @@ from expertloop.schemas import (
     EditOut,
     InstructionSetOut,
     InstructionSetSummary,
+    PolicyIn,
     PublicationOut,
     PublishOut,
     ReviewIn,
@@ -140,6 +141,23 @@ def _transition_out(session: Session, instruction_set: InstructionSet) -> Transi
         instruction_set=instruction_set,
         approvals=service.count_approvals(session, instruction_set),
         required_approvals=instruction_set.required_approvals,
+        missing_roles=service.missing_roles(session, instruction_set),
+    )
+
+
+@router.put("/{instruction_set_id}/policy", response_model=InstructionSetSummary)
+def set_policy(
+    instruction_set_id: int,
+    body: PolicyIn,
+    session: Session = Depends(get_session),
+    principal: Principal = Depends(require_role("expert")),
+) -> InstructionSet:
+    return service.set_review_policy(
+        session,
+        principal,
+        instruction_set_id,
+        body.review_policy.model_dump(),
+        body.required_approvals,
     )
 
 

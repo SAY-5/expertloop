@@ -19,8 +19,9 @@ def ingest(
     principal: Principal = Depends(require_role("expert")),
 ) -> IngestOut:
     required = body.required_approvals or get_settings().default_required_approvals
+    policy = body.review_policy.model_dump() if body.review_policy else None
     note, instruction_set, coverage, linked = service.ingest_note(
-        session, principal, body.title, body.body, required
+        session, principal, body.title, body.body, required, policy
     )
     return IngestOut(
         note=NoteOut.model_validate(note),

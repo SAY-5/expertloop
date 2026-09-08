@@ -14,10 +14,11 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from expertloop import __version__, metrics
+from expertloop import reviews as review_policies
 from expertloop.config import ApiKey, Settings, get_settings
 from expertloop.db import get_session, session_factory
 from expertloop.drift import DriftScheduler
-from expertloop.routers import instruction_sets, notes, sources
+from expertloop.routers import instruction_sets, notes, reviews, sources
 from expertloop.service import Conflict, Invalid, NotFound
 from expertloop.targets import JiraTarget, Target, WebhookTarget
 from expertloop.workflow import IllegalTransition
@@ -56,7 +57,11 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-        scheduler = DriftScheduler(session_factory(), settings.drift_check_interval_seconds)
+        scheduler = DriftScheduler(
+            session_factory(),
+            settings.drift_check_interval_seconds,
+            jobs=[review_policies.escalate_overdue],
+        )
         app.state.drift_scheduler = scheduler
         scheduler.start()
         try:
@@ -81,6 +86,7 @@ def create_app(
     app.include_router(sources.router)
     app.include_router(notes.router)
     app.include_router(instruction_sets.router)
+    app.include_router(reviews.router)
 
     @app.exception_handler(NotFound)
     async def not_found(_: Request, exc: NotFound) -> JSONResponse:

@@ -185,23 +185,37 @@ def drift_report(session: Session, instruction_set: InstructionSet) -> dict[str,
     }
 
 
-class DriftScheduler:
-    """Background thread that re-scans all sources every ``interval`` seconds."""
+Job = Callable[[Session, Principal], list[Any]]
 
-    def __init__(self, session_factory: Callable[[], Session], interval: float) -> None:
+
+class DriftScheduler:
+    """Background thread that re-scans all sources every ``interval`` seconds.
+
+    Extra ``jobs`` (session, actor) run on the same tick; each returns what it touched.
+    """
+
+    def __init__(
+        self,
+        session_factory: Callable[[], Session],
+        interval: float,
+        jobs: list[Job] | None = None,
+    ) -> None:
         self.session_factory = session_factory
         self.interval = interval
+        self.jobs: list[Job] = [scan_drift, *(jobs or [])]
         self.runs = 0
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
 
     def tick(self) -> int:
+        touched = 0
         with self.session_factory() as session:
-            created = scan_drift(session, SCHEDULER)
+            for job in self.jobs:
+                touched += len(job(session, SCHEDULER))
         self.runs += 1
-        if created:
-            log.info("drift_scan", flags=len(created))
-        return len(created)
+        if touched:
+            log.info("scheduler_tick", touched=touched)
+        return touched
 
     def _loop(self) -> None:
         while not self._stop.wait(self.interval):
