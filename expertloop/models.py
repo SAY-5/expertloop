@@ -66,6 +66,11 @@ class InstructionSet(Base):
     submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     review_deadline_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     escalated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # branches: a draft copied from a parent's version, merged back with conflict detection
+    parent_id: Mapped[int | None] = mapped_column(ForeignKey("instruction_sets.id"))
+    branched_from_version: Mapped[int | None] = mapped_column(Integer)
+    merged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    merged_into_version: Mapped[int | None] = mapped_column(Integer)
     document: Mapped[dict[str, Any]] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(
@@ -73,6 +78,12 @@ class InstructionSet(Base):
     )
 
     note: Mapped[Note] = relationship(back_populates="instruction_sets")
+    parent: Mapped[InstructionSet | None] = relationship(
+        remote_side="InstructionSet.id", back_populates="branches"
+    )
+    branches: Mapped[list[InstructionSet]] = relationship(
+        back_populates="parent", order_by="InstructionSet.id"
+    )
     versions: Mapped[list[InstructionSetVersion]] = relationship(
         back_populates="instruction_set", order_by="InstructionSetVersion.version"
     )
