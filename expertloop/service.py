@@ -9,7 +9,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from expertloop import metrics
+from expertloop import drift, metrics
 from expertloop.auth import Principal
 from expertloop.compiler import compile_note
 from expertloop.compiler.compile import citation_coverage, render_prompt, validate_document
@@ -163,6 +163,7 @@ def apply_edit(
     )
     instruction_set.document = document
     instruction_set.version = new_version
+    resolved = drift.resolve_after_edit(session, actor, instruction_set)
     if from_state == State.approved:
         instruction_set.state = assert_transition("edit_after_approval", from_state)
     elif from_state == State.published:
@@ -177,9 +178,34 @@ def apply_edit(
         from_version=edit.from_version,
         to_version=new_version,
         reason=reason,
+        drift_resolved=[f.step_id for f in resolved],
     )
     session.commit()
     return edit
+
+
+def reverify(
+    session: Session, actor: Principal, instruction_set_id: int, step_ids: list[str] | None
+) -> list[Any]:
+    """An expert confirms stale steps still hold against the changed source."""
+    instruction_set = get_instruction_set(session, instruction_set_id)
+    wanted = set(step_ids) if step_ids else None
+    resolved = drift.resolve_flags(session, actor, instruction_set, wanted, "reverified")
+    if not resolved:
+        raise Conflict(
+            "no open drift flags to verify" + (f" for {sorted(wanted)}" if wanted else "")
+        )
+    _audit(
+        session,
+        instruction_set,
+        actor,
+        "drift_reverified",
+        instruction_set.state,
+        instruction_set.state,
+        steps=[f.step_id for f in resolved],
+    )
+    session.commit()
+    return resolved
 
 
 def transition(
@@ -337,6 +363,12 @@ def latest_test_run(session: Session, instruction_set: InstructionSet) -> TestRu
 def _publish_gate(session: Session, instruction_set: InstructionSet) -> TestRun:
     if instruction_set.state != State.approved:
         raise IllegalTransition("publish", instruction_set.state)
+    stale = sorted({f.step_id for f in drift.open_flags(session, instruction_set)})
+    if stale:
+        raise Conflict(
+            "publish blocked: stale steps cite changed sources: " + ", ".join(stale),
+            {"stale_steps": stale},
+        )
     run = latest_test_run(session, instruction_set)
     if run is None:
         raise Conflict("publish blocked: no test run recorded for this instruction set")
