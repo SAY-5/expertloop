@@ -61,6 +61,11 @@ class InstructionSet(Base):
     published_version: Mapped[int | None] = mapped_column(Integer)
     required_approvals: Mapped[int] = mapped_column(Integer, default=1)
     review_round: Mapped[int] = mapped_column(Integer, default=0)
+    # required_roles, allow_self_approval, review_deadline_hours (see reviews.ReviewPolicy)
+    review_policy: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    review_deadline_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    escalated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     document: Mapped[dict[str, Any]] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(
