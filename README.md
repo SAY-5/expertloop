@@ -42,6 +42,12 @@ Prometheus metrics.
 * **Reach business systems.** `publish` delivers the version snapshot to a signed webhook
   target and a Jira comment plus attachment target, records receipts per target, and
   `rollback` re-delivers the previous published version.
+* **Review policies and SLAs.** Each set carries a review policy: required approval
+  count, reviewer roles that must be among the approvers, whether the author of the
+  current version may approve it (off by default), and a review deadline in hours.
+  Submitting starts the clock; `POST /reviews/escalate` (also run by the scheduler)
+  writes a `review_escalated` audit event for overdue sets, and `GET /reviews/workload`
+  shows the queue with deadlines and what each reviewer still owes.
 * **Source drift detection.** Sources are re-hashed on demand (`POST /sources/{id}/rehash`,
   `POST /sources/check-drift`, or re-registering with new content) or on a schedule
   (`EXPERTLOOP_DRIFT_CHECK_INTERVAL_SECONDS`). When a hash changes, every step citing that
@@ -108,7 +114,7 @@ All endpoints take `X-API-Key`. `admin` may call everything.
 | GET | `/sources` | expert, reviewer | List sources |
 | POST | `/sources/{id}/rehash` | expert, reviewer | Re-hash a source (optional new `content`); flags citing steps when the hash changed |
 | POST | `/sources/check-drift` | expert, reviewer | Re-scan every live instruction set against current source hashes |
-| POST | `/notes` | expert | Ingest a note and compile instruction set v1; returns coverage and sources linked |
+| POST | `/notes` | expert | Ingest a note and compile instruction set v1 (optional `required_approvals`, `review_policy`); returns coverage and sources linked |
 | GET | `/notes`, `/notes/{id}` | expert, reviewer | Read notes |
 | GET | `/instruction-sets` | expert, reviewer | List sets with state and versions |
 | GET | `/instruction-sets/{id}` | expert, reviewer | Full document |
@@ -122,6 +128,9 @@ All endpoints take `X-API-Key`. `admin` may call everything.
 | POST | `/instruction-sets/{id}/submit` | expert | `draft` or `changes_requested` to `in_review` |
 | POST | `/instruction-sets/{id}/review` | reviewer | `approve` or `request_changes` with comment |
 | GET | `/instruction-sets/{id}/reviews`, `/audit` | expert, reviewer | Review decisions and audit trail |
+| PUT | `/instruction-sets/{id}/policy` | expert | Set `review_policy` (`required_roles`, `allow_self_approval`, `review_deadline_hours`) and `required_approvals`; 409 while in review |
+| GET | `/reviews/workload` | reviewer | Queue of sets in review with deadlines, missing roles and per-reviewer pending, overdue and decided counts |
+| POST | `/reviews/escalate` | reviewer | Escalate every overdue review once; the scheduler runs this too |
 | POST | `/instruction-sets/{id}/test-cases` | expert, reviewer | Add a test case (`scenario`, `expectations`) |
 | POST | `/instruction-sets/{id}/run-tests` | expert, reviewer | Execute all cases on the current version |
 | GET | `/instruction-sets/{id}/test-cases`, `/test-runs` | expert, reviewer | Cases and recorded runs |
@@ -143,7 +152,7 @@ Test case expectations: `required_actions`, `forbidden_actions`, `expected_outco
 | --- | --- |
 | `sources` | `kind`, `ref`, optional content, `content_hash` (SHA-256), `last_checked_at`, unique per kind and ref |
 | `notes` | Raw expert notes with author |
-| `instruction_sets` | Head document (JSONB), `state`, `version`, `published_version`, `required_approvals`, `review_round` |
+| `instruction_sets` | Head document (JSONB), `state`, `version`, `published_version`, `required_approvals`, `review_policy` (JSONB), `review_round`, `submitted_at`, `review_deadline_at`, `escalated_at` |
 | `instruction_set_versions` | Immutable document snapshot per version |
 | `edits` | Author, from/to version, reason, unified diff |
 | `review_decisions` | Reviewer, role, version, review round, decision, comment |
@@ -174,6 +183,7 @@ expertloop/
   fakes/       fake webhook receiver and Jira for demos and tests
   routers/     FastAPI routes
   drift.py     source re-hashing, drift flags and the scan scheduler
+  reviews.py   review policies, deadlines, escalation and reviewer workload
   service.py   audited business logic
   demo.py      end-to-end demo driver
 alembic/       migrations
@@ -186,6 +196,15 @@ See `ARCHITECTURE.md` for the compiler, citation, state machine, gating and deli
 design, and `CONTRIBUTING.md` for the development workflow.
 
 ## Changelog
+
+### 3.0.0
+
+* Review policies per instruction set: required reviewer roles, no self-approval of a
+  version you authored (unless the policy allows it), and review deadlines.
+* Overdue reviews are escalated with an audit event, on demand or by the scheduler;
+  `GET /reviews/workload` lists the queue and per-reviewer load.
+* Migration `0003` adds `review_policy`, `submitted_at`, `review_deadline_at` and
+  `escalated_at` to `instruction_sets`.
 
 ### 2.0.0
 

@@ -85,9 +85,19 @@ draft ──submit──> in_review ──approve──> approved ──publish�
 `IllegalTransition` (HTTP 409) for anything else. Reviews are recorded per version and per
 review round (`review_round` increments on submit and resubmit), so approvals for an older
 version or an earlier round never count. `required_approvals` is set per instruction set;
-distinct reviewers are counted, the note author cannot review, and roles are enforced by
-API key (`expert`, `reviewer`, `admin`). Every transition, edit, review, test run, blocked
-publish and delivery writes an `audit_events` row.
+distinct reviewers are counted, and roles are enforced by API key (`expert`, `reviewer`,
+`admin`). Every transition, edit, review, test run, blocked publish and delivery writes
+an `audit_events` row.
+
+`expertloop/reviews.py` adds the per-set review policy (`review_policy` JSON). Approval
+needs `required_approvals` distinct approvers and at least one approver per role in
+`required_roles`; the response and the `approval_recorded` audit event name the roles
+still missing. Unless `allow_self_approval` is set, neither the note author nor the
+author of the current version (the last editor) may approve it. `submit` and `resubmit`
+start the review clock: `review_deadline_at` is `submitted_at` plus
+`review_deadline_hours`. `escalate_overdue` writes one `review_escalated` event per
+overdue set and stamps `escalated_at`; a resubmit clears it. `workload` builds the
+review queue (sorted by deadline) and, per reviewer, the sets still waiting on them.
 
 ## Test gating
 
