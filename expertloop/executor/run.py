@@ -70,17 +70,22 @@ def _lookup(facts: dict[str, Any], name: str) -> tuple[bool, Any]:
 def evaluate_condition(condition: str, scenario: dict[str, Any]) -> bool:
     """Evaluate a natural-language condition against the scenario.
 
-    Structured facts live in ``scenario["facts"]``; free-form flags in ``scenario["flags"]``
-    match a condition by exact (case-insensitive) text.
+    The condition plugin registry answers: free-form flags in ``scenario["flags"]`` match
+    by exact (case-insensitive) text, structured facts in ``scenario["facts"]`` are
+    compared by the built-in grammar, and deployments may register their own plugins.
     """
+    from expertloop.executor.plugins import registry
+
+    return registry.evaluate(condition, scenario)[0]
+
+
+def compare_condition(condition: str, scenario: dict[str, Any]) -> bool | None:
+    """The built-in comparison grammar; None when the condition is not a comparison."""
     facts = scenario.get("facts", {})
-    flags = {str(f).strip().lower() for f in scenario.get("flags", [])}
     normalized = condition.strip().lower().rstrip(".")
-    if normalized in flags:
-        return True
     match = COMPARE_RE.match(normalized)
     if not match:
-        return False
+        return None
     found, actual = _lookup(facts, match.group("field"))
     if not found:
         return False
