@@ -15,11 +15,13 @@ from typing import Any
 
 COMPARE_RE = re.compile(
     r"^(?P<field>[a-z_][a-z0-9_ ]*?)\s*"
-    r"(?P<op>>=|<=|==|!=|>|<|\bis not\b|\bis\b|\bcontains\b|\bequals\b"
-    r"|\bexceeds\b|\bover\b|\bunder\b|\bbelow\b|\babove\b)"
+    r"(?P<op>>=|<=|==|!=|>|<|\bis more than\b|\bis greater than\b|\bis at least\b"
+    r"|\bis less than\b|\bis at most\b|\bis over\b|\bis under\b|\bis not\b|\bis\b"
+    r"|\bcontains\b|\bequals\b|\bexceeds\b|\bover\b|\bunder\b|\bbelow\b|\babove\b)"
     r"\s*(?P<value>.+)$",
     re.IGNORECASE,
 )
+NUMBER_RE = re.compile(r"^[$€£]?\s*(-?\d[\d,]*(?:\.\d+)?)\b")
 STOP_WORDS = ("stop", "halt", "escalate", "do not proceed", "hand off", "hand it off", "pause")
 
 
@@ -29,6 +31,7 @@ class ExecutionTrace:
     tool_calls: list[str] = field(default_factory=list)
     rules_fired: list[str] = field(default_factory=list)
     outcomes: list[str] = field(default_factory=list)
+    skipped: list[str] = field(default_factory=list)
     halted_at: str | None = None
 
     def as_dict(self) -> dict[str, Any]:
@@ -37,6 +40,7 @@ class ExecutionTrace:
             "tool_calls": self.tool_calls,
             "rules_fired": self.rules_fired,
             "outcomes": self.outcomes,
+            "skipped": self.skipped,
             "halted_at": self.halted_at,
         }
 
@@ -48,11 +52,11 @@ def _coerce(value: str) -> Any:
         return True
     if lowered in ("false", "no"):
         return False
-    cleaned = text.replace(",", "").lstrip("$")
-    try:
+    number = NUMBER_RE.match(text)
+    if number:
+        cleaned = number.group(1).replace(",", "")
         return float(cleaned) if "." in cleaned else int(cleaned)
-    except ValueError:
-        return text
+    return text
 
 
 def _lookup(facts: dict[str, Any], name: str) -> tuple[bool, Any]:
@@ -87,13 +91,13 @@ def evaluate_condition(condition: str, scenario: dict[str, Any]) -> bool:
     else:
         actual_cmp, expected_cmp = actual, expected
     try:
-        if op in (">", "exceeds", "over", "above"):
+        if op in (">", "exceeds", "over", "above", "is more than", "is greater than", "is over"):
             return actual_cmp > expected_cmp
-        if op in ("<", "under", "below"):
+        if op in ("<", "under", "below", "is less than", "is under"):
             return actual_cmp < expected_cmp
-        if op == ">=":
+        if op in (">=", "is at least"):
             return actual_cmp >= expected_cmp
-        if op == "<=":
+        if op in ("<=", "is at most"):
             return actual_cmp <= expected_cmp
         if op in ("==", "is", "equals"):
             return actual_cmp == expected_cmp
@@ -125,6 +129,9 @@ def execute(document: dict[str, Any], scenario: dict[str, Any]) -> ExecutionTrac
     if _apply_rules(document.get("decision_rules", []), scenario, trace, "global"):
         return trace
     for step in document.get("steps", []):
+        if step.get("condition") and not evaluate_condition(step["condition"], scenario):
+            trace.skipped.append(step["id"])
+            continue
         if _apply_rules(step.get("decision_rules", []), scenario, trace, step["id"]):
             return trace
         trace.actions.append(step["action"])
@@ -132,6 +139,9 @@ def execute(document: dict[str, Any], scenario: dict[str, Any]) -> ExecutionTrac
             trace.tool_calls.append(step["tool"])
         if step.get("expected_outcome"):
             trace.outcomes.append(step["expected_outcome"])
+        if step.get("halts"):
+            trace.halted_at = step["id"]
+            return trace
     trace.outcomes.extend(o["text"] for o in document.get("outcomes", []))
     return trace
 

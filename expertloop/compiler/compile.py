@@ -52,15 +52,26 @@ def _detect_tool(text: str, known_tools: list[str]) -> str | None:
     return match.group(1) if match else None
 
 
-def _split_rules(text: str) -> tuple[str, list[dict[str, str]], list[str], str | None]:
-    """Separate a step into its action, embedded decision rules, forbidden clauses, outcome."""
+def _split_rules(
+    text: str,
+) -> tuple[str, str | None, list[dict[str, Any]], list[str], str | None]:
+    """Separate a step into action, gating condition, decision rules, forbidden clauses, outcome.
+
+    A step whose first line is itself ``if X, Y`` is a conditional step: it is executed only
+    when X holds and its action is Y. Rules on later lines are decision rules evaluated before
+    the action.
+    """
     action_lines: list[str] = []
-    rules: list[dict[str, str]] = []
+    condition: str | None = None
+    rules: list[dict[str, Any]] = []
     forbidden: list[str] = []
     outcome: str | None = None
-    for line in text.split("\n"):
+    for index, line in enumerate(text.split("\n")):
         rule = RULE_RE.match(line)
-        if rule:
+        if rule and index == 0:
+            condition = rule.group(1).strip()
+            line = rule.group(2).strip()
+        elif rule:
             then = rule.group(2).strip().rstrip(".")
             rules.append(
                 {
@@ -76,14 +87,17 @@ def _split_rules(text: str) -> tuple[str, list[dict[str, str]], list[str], str |
             continue
         result = OUTCOME_RE.search(line)
         if result and outcome is None:
-            outcome = result.group(1).strip().rstrip(".")
+            outcome, _, rest = result.group(1).strip().partition(". ")
+            outcome = outcome.rstrip(".")
             line = line[: result.start()].strip().rstrip(",")
             if line:
                 action_lines.append(line)
+            if rest:
+                action_lines.append(rest.strip())
             continue
         action_lines.append(line.strip())
     action = " ".join(part for part in action_lines if part).strip()
-    return action, rules, forbidden, outcome
+    return action, condition, rules, forbidden, outcome
 
 
 def compile_parsed(parsed: ParsedNote, note_id: int | None, name: str) -> dict[str, Any]:
@@ -130,13 +144,15 @@ def compile_parsed(parsed: ParsedNote, note_id: int | None, name: str) -> dict[s
         )
 
     for index, item in enumerate(parsed.section("steps"), start=1):
-        action, rules, banned, outcome = _split_rules(item.text)
+        action, condition, rules, banned, outcome = _split_rules(item.text)
         if not action:
             action = _first_line(item.text)
         step = {
             "id": f"s{index}",
             "order": index,
             "action": action.rstrip("."),
+            "condition": condition,
+            "halts": any(word in action.lower() for word in STOP_WORDS),
             "tool": _detect_tool(item.text, tools),
             "decision_rules": rules,
             "forbidden": banned,
@@ -177,7 +193,8 @@ def render_prompt(document: dict[str, Any]) -> str:
     lines.append("Follow these steps in order:")
     for step in document["steps"]:
         tool = f" (tool: {step['tool']})" if step.get("tool") else ""
-        lines.append(f"{step['order']}. {step['action']}{tool}")
+        gate = f"Only if {step['condition']}: " if step.get("condition") else ""
+        lines.append(f"{step['order']}. {gate}{step['action']}{tool}")
         for rule in step["decision_rules"]:
             lines.append(f"   - if {rule['condition']}: {rule['then']}")
         if step.get("expected_outcome"):

@@ -79,7 +79,7 @@ def extract_sources(text: str) -> list[SourceRef]:
         add("url", match.group(0).rstrip(".,;"))
     scrubbed = URL_RE.sub(" ", text)
     for match in DOC_RE.finditer(scrubbed):
-        add("doc", match.group(1))
+        add("doc", match.group(1).rstrip(".,;:"))
     scrubbed = DOC_RE.sub(" ", scrubbed)
     for match in TICKET_RE.finditer(scrubbed):
         add("ticket", match.group(1))
