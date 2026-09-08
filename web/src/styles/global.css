@@ -236,7 +236,9 @@ pre,
   letter-spacing: 0.03em;
   border: 1px solid var(--line-strong);
   color: var(--text-dim);
-  white-space: nowrap;
+  text-align: left;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .chip-plum {
