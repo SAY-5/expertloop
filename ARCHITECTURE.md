@@ -71,6 +71,21 @@ JSON), an `instruction_set_versions` snapshot, and bumps `instruction_sets.versi
 Snapshots are what publication and rollback deliver, so a rollback never depends on the
 current head.
 
+## Diff, branches and merge
+
+`expertloop/versioning.py` compares documents structurally. Steps are matched by `id`
+and diffed field by field; entries in `preconditions`, `decision_rules`,
+`forbidden_actions` and `outcomes` are matched by text; citation source hashes are
+ignored so a re-hashed source is not an edit. A branch is an ordinary instruction set
+(same note, `parent_id`, `branched_from_version`) seeded from a stored snapshot, so it
+gets its own edits, test runs and review without touching the parent. `merge` does a
+three-way merge with base = the parent snapshot the branch started from, ours = the
+parent head and theirs = the branch head: a field changed on one side wins, identical
+changes collapse, and a field changed differently on both sides (or removed on one side
+and changed on the other) is a conflict. Conflicts are audited as `merge_conflict` and
+returned with 409; a clean merge is recorded like any edit (`action=merge`) and stamps
+`merged_at` and `merged_into_version` on the branch, which then cannot be merged again.
+
 ## Approval state machine
 
 ```

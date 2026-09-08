@@ -42,6 +42,13 @@ Prometheus metrics.
 * **Reach business systems.** `publish` delivers the version snapshot to a signed webhook
   target and a Jira comment plus attachment target, records receipts per target, and
   `rollback` re-delivers the previous published version.
+* **Version diff and branching.** `GET /instruction-sets/{id}/diff?from=1&to=3` returns
+  a structured, step-level diff (added, removed and changed steps with per-field before
+  and after, plus section entries). `POST /instruction-sets/{id}/branch` copies a version
+  (the published one by default) into a new draft for experimentation; the branch has its
+  own edits, tests and review. `POST /instruction-sets/{branch}/merge` three-way merges
+  it back into the parent head, taking one-sided changes and refusing with the list of
+  conflicting steps and fields when both sides changed the same thing.
 * **Review policies and SLAs.** Each set carries a review policy: required approval
   count, reviewer roles that must be among the approvers, whether the author of the
   current version may approve it (off by default), and a review deadline in hours.
@@ -121,6 +128,10 @@ All endpoints take `X-API-Key`. `admin` may call everything.
 | GET | `/instruction-sets/{id}/prompt` | expert, reviewer | Rendered agent prompt (text) |
 | GET | `/instruction-sets/{id}/citations` | expert, reviewer | Coverage plus per-citation hash verification |
 | GET | `/instruction-sets/{id}/versions` | expert, reviewer | Version snapshots |
+| GET | `/instruction-sets/{id}/diff?from=&to=` | expert, reviewer | Step-level diff between two versions |
+| POST | `/instruction-sets/{id}/branch` | expert | Copy a version (`from_version`, default published) into a new draft branch |
+| GET | `/instruction-sets/{id}/branches` | expert, reviewer | Branches of a set |
+| POST | `/instruction-sets/{id}/merge` | expert | Merge a branch into its parent (`reason`, `expected_parent_version`); 409 with `conflicts` |
 | GET | `/instruction-sets/{id}/drift` | expert, reviewer | Stale steps and open or resolved drift flags |
 | POST | `/instruction-sets/{id}/drift/verify` | expert | Re-verify stale steps (`step_ids`, or all) against the changed source |
 | PATCH | `/instruction-sets/{id}` | expert | Edit: `expected_version`, `reason`, full `document`; 409 on stale version, 422 on uncited steps |
@@ -152,7 +163,7 @@ Test case expectations: `required_actions`, `forbidden_actions`, `expected_outco
 | --- | --- |
 | `sources` | `kind`, `ref`, optional content, `content_hash` (SHA-256), `last_checked_at`, unique per kind and ref |
 | `notes` | Raw expert notes with author |
-| `instruction_sets` | Head document (JSONB), `state`, `version`, `published_version`, `required_approvals`, `review_policy` (JSONB), `review_round`, `submitted_at`, `review_deadline_at`, `escalated_at` |
+| `instruction_sets` | Head document (JSONB), `state`, `version`, `published_version`, `required_approvals`, `review_policy` (JSONB), `review_round`, `submitted_at`, `review_deadline_at`, `escalated_at`, `parent_id`, `branched_from_version`, `merged_at`, `merged_into_version` |
 | `instruction_set_versions` | Immutable document snapshot per version |
 | `edits` | Author, from/to version, reason, unified diff |
 | `review_decisions` | Reviewer, role, version, review round, decision, comment |
@@ -184,6 +195,7 @@ expertloop/
   routers/     FastAPI routes
   drift.py     source re-hashing, drift flags and the scan scheduler
   reviews.py   review policies, deadlines, escalation and reviewer workload
+  versioning.py step-level diff and three-way merge of documents
   service.py   audited business logic
   demo.py      end-to-end demo driver
 alembic/       migrations
@@ -196,6 +208,14 @@ See `ARCHITECTURE.md` for the compiler, citation, state machine, gating and deli
 design, and `CONTRIBUTING.md` for the development workflow.
 
 ## Changelog
+
+### 4.0.0
+
+* Step-level diff between any two versions of an instruction set.
+* Branch a draft from a published (or any) version, work on it in isolation, and merge
+  it back with three-way conflict detection; conflicts are audited and returned as 409.
+* Migration `0004` adds `parent_id`, `branched_from_version`, `merged_at` and
+  `merged_into_version` to `instruction_sets`.
 
 ### 3.0.0
 
