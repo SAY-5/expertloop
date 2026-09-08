@@ -1,4 +1,5 @@
 import { CompileSection } from "./components/CompileSection";
+import { Footer } from "./components/Footer";
 import { GateSection } from "./components/GateSection";
 import { Hero } from "./components/Hero";
 import { ReviewSection } from "./components/ReviewSection";
@@ -18,6 +19,7 @@ export default function App() {
         <ReviewSection />
         <GateSection />
       </main>
+      <Footer />
     </WorldProvider>
   );
 }
