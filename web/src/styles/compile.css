@@ -1,0 +1,253 @@
+/* Compile and citations section. */
+
+.compile-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 22px;
+}
+
+.picker-tab {
+  display: grid;
+  gap: 2px;
+  text-align: left;
+  padding: 10px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(255, 233, 250, 0.03);
+  color: var(--text-dim);
+  transition:
+    border-color 0.25s var(--ease),
+    background 0.25s var(--ease),
+    color 0.25s var(--ease);
+}
+
+.picker-tab:hover {
+  color: var(--text);
+  border-color: var(--line-strong);
+}
+
+.picker-tab.active {
+  color: var(--text);
+  border-color: rgba(224, 79, 214, 0.55);
+  background: var(--plum-soft);
+  box-shadow: 0 0 0 1px rgba(224, 79, 214, 0.2) inset;
+}
+
+.picker-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.picker-file {
+  font-size: 0.66rem;
+  color: var(--text-mute);
+}
+
+.compile-coverage {
+  margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.compile-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.compile-note {
+  position: sticky;
+  top: 24px;
+}
+
+.compile-out {
+  padding: 22px 22px 18px;
+  min-height: 420px;
+}
+
+.compile-out-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 10px;
+}
+
+.compile-out-title {
+  font-size: 1.7rem;
+  margin-top: 4px;
+}
+
+.btn.active {
+  color: var(--plum);
+}
+
+.compile-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.compile-entry {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 6px 12px;
+  padding: 10px 10px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  transition: background 0.25s var(--ease);
+}
+
+.compile-entry:hover,
+.compile-entry:focus-within {
+  background: rgba(255, 233, 250, 0.04);
+  border-color: var(--line);
+}
+
+.compile-step {
+  background: rgba(224, 79, 214, 0.05);
+}
+
+.compile-kind {
+  color: var(--plum);
+  font-size: 0.7rem;
+  padding-top: 4px;
+  letter-spacing: 0.06em;
+}
+
+.compile-text {
+  font-size: 0.94rem;
+  line-height: 1.45;
+}
+
+.compile-cond {
+  color: var(--warn);
+}
+
+.compile-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 6px;
+}
+
+.compile-cites {
+  grid-column: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.cite-chip {
+  cursor: crosshair;
+  transition:
+    transform 0.2s var(--ease),
+    box-shadow 0.2s var(--ease);
+}
+
+.cite-chip:hover,
+.cite-chip:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(224, 79, 214, 0.25);
+}
+
+.cite-hash {
+  opacity: 0.6;
+  font-size: 0.62rem;
+}
+
+.compile-prompt {
+  margin: 0;
+  white-space: pre-wrap;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: var(--text-dim);
+  padding: 8px 4px;
+}
+
+.registry {
+  margin-top: 28px;
+  padding: 22px;
+}
+
+.registry-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.registry-head h3 {
+  font-size: 1.5rem;
+  margin-top: 4px;
+}
+
+.registry-scroll {
+  overflow-x: auto;
+}
+
+.registry-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  min-width: 640px;
+}
+
+.registry-table th {
+  text-align: left;
+  font-family: var(--mono);
+  font-weight: 400;
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-mute);
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.registry-table td {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+
+.registry-ref {
+  color: var(--text);
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.registry-hash {
+  color: var(--plum);
+  letter-spacing: 0.04em;
+}
+
+.registry-drift td {
+  background: rgba(255, 111, 142, 0.06);
+}
+
+@media (max-width: 960px) {
+  .compile-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .compile-note {
+    position: static;
+  }
+
+  .compile-coverage {
+    margin-left: 0;
+  }
+}
