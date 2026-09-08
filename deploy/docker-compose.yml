@@ -1,0 +1,47 @@
+name: expertloop
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: expertloop
+      POSTGRES_PASSWORD: expertloop
+      POSTGRES_DB: expertloop
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U expertloop -d expertloop"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  fakes:
+    build:
+      context: ..
+    command: ["uvicorn", "expertloop.fakes.server:app", "--host", "0.0.0.0", "--port", "8081"]
+    environment:
+      EXPERTLOOP_WEBHOOK_SECRET: demo-webhook-secret
+    ports:
+      - "8081:8081"
+
+  api:
+    build:
+      context: ..
+    environment:
+      EXPERTLOOP_DATABASE_URL: postgresql+psycopg://expertloop:expertloop@postgres:5432/expertloop
+      EXPERTLOOP_API_KEYS: dana:expert:ek-dana,ravi:reviewer:rk-ravi,mei:reviewer:rk-mei,ops:admin:ak-ops
+      EXPERTLOOP_WEBHOOK_URL: http://fakes:8081/webhook
+      EXPERTLOOP_WEBHOOK_SECRET: demo-webhook-secret
+      EXPERTLOOP_JIRA_BASE_URL: http://fakes:8081/jira
+      EXPERTLOOP_JIRA_ISSUE_KEY: OPS-42
+      EXPERTLOOP_JIRA_TOKEN: fake-token
+    depends_on:
+      postgres:
+        condition: service_healthy
+      fakes:
+        condition: service_started
+    ports:
+      - "8080:8080"
+
+volumes:
+  pgdata:
