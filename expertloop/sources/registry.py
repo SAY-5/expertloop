@@ -48,9 +48,9 @@ def resolve_citations(session: Session, document: dict[str, Any]) -> int:
     """Attach ``source_id`` and ``source_hash`` to every citation with a source reference.
 
     Unknown sources are registered with the reference itself as the hashed payload so the
-    link is always resolvable. Returns the number of citations resolved.
+    link is always resolvable. Returns the number of distinct sources linked.
     """
-    resolved = 0
+    linked: set[int] = set()
     for cite in iter_citations(document):
         ref = cite.get("source_ref")
         if not ref:
@@ -58,8 +58,8 @@ def resolve_citations(session: Session, document: dict[str, Any]) -> int:
         source = register_source(session, cite.get("source_kind", "doc"), ref)
         cite["source_id"] = source.id
         cite["source_hash"] = source.content_hash
-        resolved += 1
-    return resolved
+        linked.add(source.id)
+    return len(linked)
 
 
 def iter_citations(document: dict[str, Any]):
