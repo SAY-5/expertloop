@@ -9,13 +9,19 @@ from fastapi.testclient import TestClient
 from tests.conftest import headers, sample
 
 
-def ingest(client: TestClient, name: str, required_approvals: int = 1) -> dict[str, Any]:
+def ingest(
+    client: TestClient,
+    name: str,
+    required_approvals: int = 1,
+    review_policy: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     response = client.post(
         "/notes",
         json={
             "title": name.removesuffix(".md").replace("_", " "),
             "body": sample(name),
             "required_approvals": required_approvals,
+            "review_policy": review_policy,
         },
         headers=headers("expert"),
     )
