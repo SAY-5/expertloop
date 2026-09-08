@@ -4,15 +4,15 @@ from sqlalchemy import engine_from_config, pool
 
 from alembic import context
 from expertloop import models  # noqa: F401  (register tables on Base.metadata)
-from expertloop.config import get_settings
+from expertloop.config import Settings
 from expertloop.db import Base
 
 config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# EXPERTLOOP_DATABASE_URL always wins over the placeholder in alembic.ini
-config.set_main_option("sqlalchemy.url", get_settings().database_url)
+# EXPERTLOOP_DATABASE_URL (environment or .env) wins over the placeholder in alembic.ini
+config.set_main_option("sqlalchemy.url", Settings().database_url)
 target_metadata = Base.metadata
 
 

@@ -15,7 +15,7 @@ from sqlalchemy.engine import Engine
 
 from alembic import command
 from expertloop import db
-from expertloop.config import ApiKey, Settings
+from expertloop.config import ApiKey, Settings, get_settings
 from expertloop.fakes import build_fake_app
 from expertloop.main import create_app, default_targets
 
@@ -51,7 +51,10 @@ def database_url() -> Iterator[str]:
     if url:
         yield url
         return
-    from testcontainers.postgres import PostgresContainer
+    try:
+        from testcontainers.community.postgres import PostgresContainer
+    except ImportError:  # older testcontainers releases
+        from testcontainers.postgres import PostgresContainer
 
     with PostgresContainer("postgres:16-alpine", driver="psycopg") as postgres:
         yield postgres.get_connection_url()
@@ -60,6 +63,7 @@ def database_url() -> Iterator[str]:
 @pytest.fixture(scope="session")
 def engine(database_url: str) -> Iterator[Engine]:
     os.environ["EXPERTLOOP_DATABASE_URL"] = database_url
+    get_settings.cache_clear()
     config = Config(str(ROOT / "alembic.ini"))
     config.set_main_option("script_location", str(ROOT / "alembic"))
     command.upgrade(config, "head")
