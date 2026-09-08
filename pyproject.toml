@@ -1,6 +1,6 @@
 [project]
 name = "expertloop"
-version = "5.0.0"
+version = "5.0.1"
 description = "Turns expert task notes into agent instructions with linked sources, tracks edits and approval state in PostgreSQL, and gates approved workflows behind test cases before they reach business systems"
 readme = "README.md"
 requires-python = ">=3.12"

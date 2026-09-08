@@ -231,9 +231,14 @@ design, and `CONTRIBUTING.md` for the development workflow.
 | 5.0.0 | Plugins, coverage, ops | Executor condition plugin registry, test coverage report per set and per run, `GET /ops/overview` |
 
 Each release ships with its Alembic migration, tests against PostgreSQL, and a changelog
-entry below. Tags are `v1.0.0` through `v5.0.0`.
+entry below. Tags are `v1.0.0` through `v5.0.1`.
 
 ## Changelog
+
+### 5.0.1
+
+* `GET /ops/overview` counted a rollback once per delivery target; it now counts each
+  rollback once, matching the demo summary.
 
 ### 5.0.0
 
