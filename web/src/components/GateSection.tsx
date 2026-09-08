@@ -95,7 +95,7 @@ export function GateSection() {
         world.blocked += 1;
         setGateShake((k) => k + 1);
         log("blocked", `publish BLOCKED (409): ${error.message}`);
-        toast(`Publish blocked: ${error.message}`, "bad");
+        toast(`409: ${error.message}`, "bad");
       } else throw error;
     }
     bump();
