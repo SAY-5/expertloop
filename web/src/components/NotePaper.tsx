@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useEffect, useRef } from "react";
 
 interface NotePaperProps {
   body: string;
@@ -9,6 +9,8 @@ interface NotePaperProps {
   compact?: boolean;
   title?: string;
   id?: string;
+  /** Constrain the height and scroll the highlighted range into view inside the paper. */
+  maxHeight?: number;
 }
 
 const HEADING = /^(#{1,6})\s+(.*)$/;
@@ -27,8 +29,25 @@ function renderInline(text: string) {
   );
 }
 
-export const NotePaper = memo(function NotePaper({ body, highlight, revealUpTo, compact, title, id }: NotePaperProps) {
+export const NotePaper = memo(function NotePaper({ body, highlight, revealUpTo, compact, title, id, maxHeight }: NotePaperProps) {
   const lines = body.replace(/\n$/, "").split("\n");
+  const scroller = useRef<HTMLOListElement>(null);
+  const start = highlight ? highlight[0] : null;
+  const end = highlight ? highlight[1] : null;
+
+  useEffect(() => {
+    const box = scroller.current;
+    if (!box || maxHeight === undefined || start === null || end === null) return;
+    const first = box.querySelector<HTMLElement>(`[data-line="${start}"]`);
+    const last = box.querySelector<HTMLElement>(`[data-line="${end}"]`);
+    if (!first || !last) return;
+    const top = first.offsetTop;
+    const bottom = last.offsetTop + last.offsetHeight;
+    const target = Math.max(0, top - (box.clientHeight - (bottom - top)) / 2);
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    box.scrollTo({ top: target, behavior: reduced ? "auto" : "smooth" });
+  }, [start, end, maxHeight]);
+
   return (
     <div className={`paper note-paper${compact ? " note-compact" : ""}`} id={id}>
       <div className="note-topbar">
@@ -36,7 +55,12 @@ export const NotePaper = memo(function NotePaper({ body, highlight, revealUpTo, 
         <span className="note-file">{title ?? "expert note"}</span>
         <span className="note-count mono">{lines.length} lines</span>
       </div>
-      <ol className="note-lines" aria-label="note source lines">
+      <ol
+        className={`note-lines${maxHeight !== undefined ? " note-scroll" : ""}`}
+        aria-label="note source lines"
+        ref={scroller}
+        style={maxHeight !== undefined ? { maxHeight } : undefined}
+      >
         {lines.map((line, index) => {
           const number = index + 1;
           const heading = HEADING.exec(line);

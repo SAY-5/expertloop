@@ -304,6 +304,17 @@
   min-height: 0.7em;
 }
 
+.note-scroll {
+  overflow-y: auto;
+  scrollbar-width: none;
+  mask-image: linear-gradient(180deg, transparent 0, #000 14px, #000 calc(100% - 28px), transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 14px, #000 calc(100% - 28px), transparent 100%);
+}
+
+.note-scroll::-webkit-scrollbar {
+  display: none;
+}
+
 .note-hit {
   background: rgba(224, 79, 214, 0.16);
   border-left-color: var(--plum);

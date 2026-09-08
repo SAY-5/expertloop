@@ -159,7 +159,7 @@ export function Hero() {
             aria-hidden="true"
           >
             <div className="hero-note">
-              <NotePaper body={REFUND.body} title="samples/refund_handling_sop.md" highlight={highlight} revealUpTo={revealUpTo} compact />
+              <NotePaper body={REFUND.body} title="samples/refund_handling_sop.md" highlight={highlight} revealUpTo={revealUpTo} compact maxHeight={470} />
             </div>
             <div className="hero-beam">
               <svg viewBox="0 0 80 400" preserveAspectRatio="none">
