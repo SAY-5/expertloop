@@ -9,7 +9,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from expertloop import drift, metrics
+from expertloop import drift, metrics, reviews
 from expertloop.auth import Principal
 from expertloop.compiler import compile_note
 from expertloop.compiler.compile import citation_coverage, render_prompt, validate_document
@@ -83,6 +83,7 @@ def ingest_note(
     title: str,
     body: str,
     required_approvals: int,
+    review_policy: dict[str, Any] | None = None,
 ) -> tuple[Note, InstructionSet, dict[str, Any], int]:
     note = Note(title=title, author=actor.name, body=body)
     session.add(note)
@@ -98,6 +99,7 @@ def ingest_note(
         state=State.draft,
         version=1,
         required_approvals=required_approvals,
+        review_policy=reviews.ReviewPolicy.model_validate(review_policy or {}).model_dump(),
         document=document,
     )
     session.add(instruction_set)
@@ -234,23 +236,55 @@ def transition(
     instruction_set = get_instruction_set(session, instruction_set_id)
     from_state = instruction_set.state
     instruction_set.state = assert_transition(action, from_state)
+    detail: dict[str, Any] = {}
     if action in ("submit", "resubmit"):
         instruction_set.review_round += 1
-    _audit(session, instruction_set, actor, action, from_state, instruction_set.state)
+        reviews.start_review_clock(instruction_set)
+        if instruction_set.review_deadline_at is not None:
+            detail["review_deadline_at"] = instruction_set.review_deadline_at.isoformat()
+    _audit(session, instruction_set, actor, action, from_state, instruction_set.state, **detail)
+    session.commit()
+    return instruction_set
+
+
+def set_review_policy(
+    session: Session,
+    actor: Principal,
+    instruction_set_id: int,
+    policy: dict[str, Any],
+    required_approvals: int | None,
+) -> InstructionSet:
+    instruction_set = get_instruction_set(session, instruction_set_id)
+    if instruction_set.state == State.in_review:
+        raise Conflict("the review policy cannot change while the set is in review")
+    for role in policy.get("required_roles", []):
+        if role not in reviews.REVIEW_ROLES:
+            raise Invalid("review policy is not valid", [f"unknown reviewer role: {role}"])
+    instruction_set.review_policy = reviews.ReviewPolicy.model_validate(policy).model_dump()
+    if required_approvals is not None:
+        instruction_set.required_approvals = required_approvals
+    _audit(
+        session,
+        instruction_set,
+        actor,
+        "policy_set",
+        instruction_set.state,
+        instruction_set.state,
+        review_policy=instruction_set.review_policy,
+        required_approvals=instruction_set.required_approvals,
+    )
     session.commit()
     return instruction_set
 
 
 def count_approvals(session: Session, instruction_set: InstructionSet) -> int:
-    rows = session.scalars(
-        select(ReviewDecision.reviewer).where(
-            ReviewDecision.instruction_set_id == instruction_set.id,
-            ReviewDecision.version == instruction_set.version,
-            ReviewDecision.review_round == instruction_set.review_round,
-            ReviewDecision.decision == "approve",
-        )
-    ).all()
-    return len(set(rows))
+    return len({a.reviewer for a in reviews.approvals_this_round(session, instruction_set)})
+
+
+def missing_roles(session: Session, instruction_set: InstructionSet) -> list[str]:
+    return reviews.missing_roles(
+        instruction_set, reviews.approvals_this_round(session, instruction_set)
+    )
 
 
 def review(
@@ -259,8 +293,12 @@ def review(
     instruction_set = get_instruction_set(session, instruction_set_id)
     if instruction_set.state != State.in_review:
         raise IllegalTransition(decision, instruction_set.state)
-    if instruction_set.note.author == actor.name:
-        raise Conflict("the author of a note cannot review their own instruction set")
+    if reviews.is_self_approval(session, instruction_set, actor):
+        raise Conflict(
+            "self-approval is not allowed: "
+            f"{actor.name} authored version {instruction_set.version} of this instruction set",
+            {"author": actor.name},
+        )
     session.add(
         ReviewDecision(
             instruction_set_id=instruction_set.id,
@@ -287,8 +325,10 @@ def review(
         )
         session.commit()
         return instruction_set, 0
-    approvals = count_approvals(session, instruction_set)
-    if approvals >= instruction_set.required_approvals:
+    approvals, missing = reviews.policy_satisfied(
+        instruction_set, reviews.approvals_this_round(session, instruction_set)
+    )
+    if approvals >= instruction_set.required_approvals and not missing:
         instruction_set.state = assert_transition("approve", from_state)
         _audit(
             session,
@@ -308,6 +348,7 @@ def review(
             from_state,
             from_state,
             approvals=approvals,
+            missing_roles=missing,
         )
     session.commit()
     return instruction_set, approvals

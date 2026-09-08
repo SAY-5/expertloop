@@ -27,10 +27,22 @@ class SourceOut(BaseModel):
     created_at: datetime
 
 
+class ReviewPolicyIn(BaseModel):
+    required_roles: list[str] = Field(default_factory=list)
+    allow_self_approval: bool = False
+    review_deadline_hours: float | None = Field(default=None, ge=0)
+
+
+class PolicyIn(BaseModel):
+    review_policy: ReviewPolicyIn
+    required_approvals: int | None = Field(default=None, ge=1)
+
+
 class NoteIn(BaseModel):
     title: str = Field(min_length=1, max_length=256)
     body: str = Field(min_length=1)
     required_approvals: int | None = Field(default=None, ge=1)
+    review_policy: ReviewPolicyIn | None = None
 
 
 class NoteOut(BaseModel):
@@ -60,6 +72,10 @@ class InstructionSetOut(BaseModel):
     version: int
     published_version: int | None
     required_approvals: int
+    review_policy: dict[str, Any]
+    submitted_at: datetime | None
+    review_deadline_at: datetime | None
+    escalated_at: datetime | None
     document: dict[str, Any]
     created_at: datetime
     updated_at: datetime
@@ -75,6 +91,9 @@ class InstructionSetSummary(BaseModel):
     version: int
     published_version: int | None
     required_approvals: int
+    review_policy: dict[str, Any]
+    review_deadline_at: datetime | None
+    escalated_at: datetime | None
 
 
 class IngestOut(BaseModel):
@@ -183,6 +202,40 @@ class TransitionOut(BaseModel):
     instruction_set: InstructionSetSummary
     approvals: int
     required_approvals: int
+    missing_roles: list[str] = Field(default_factory=list)
+
+
+class ReviewerWorkload(BaseModel):
+    name: str
+    role: str
+    pending: list[int]
+    overdue: int
+    decided: int
+
+
+class QueueEntry(BaseModel):
+    instruction_set_id: int
+    name: str
+    version: int
+    review_round: int
+    submitted_at: datetime | None
+    review_deadline_at: datetime | None
+    overdue: bool
+    escalated: bool
+    approvals: int
+    required_approvals: int
+    missing_roles: list[str]
+    waiting_on: list[str]
+
+
+class WorkloadOut(BaseModel):
+    generated_at: datetime
+    queue: list[QueueEntry]
+    reviewers: list[ReviewerWorkload]
+
+
+class EscalationOut(BaseModel):
+    escalated: list[InstructionSetSummary]
 
 
 class RehashIn(BaseModel):
