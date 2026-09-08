@@ -119,6 +119,25 @@ def _diff(old: dict[str, Any], new: dict[str, Any]) -> str:
     return "\n".join(difflib.unified_diff(before, after, "before", "after", lineterm=""))
 
 
+def _without_hashes(step: dict[str, Any]) -> tuple[Any, Any]:
+    body = {k: v for k, v in step.items() if k != "citations"}
+    cites = [{k: v for k, v in c.items() if k != "source_hash"} for c in step.get("citations", [])]
+    return body, cites
+
+
+def _keep_hashes_of_unchanged_steps(old: dict[str, Any], new: dict[str, Any]) -> None:
+    """Only steps that actually changed pick up the registry's current source hashes.
+
+    ``resolve_citations`` refreshes every citation; restoring the previous hashes on
+    untouched steps keeps their drift flags open until an expert edits or re-verifies them.
+    """
+    previous = {step["id"]: step for step in old.get("steps", [])}
+    for step in new.get("steps", []):
+        before = previous.get(step.get("id"))
+        if before is not None and _without_hashes(before) == _without_hashes(step):
+            step["citations"] = json.loads(json.dumps(before.get("citations", [])))
+
+
 def apply_edit(
     session: Session,
     actor: Principal,
@@ -140,6 +159,7 @@ def apply_edit(
     if problems:
         raise Invalid("edited document is not valid", problems)
     resolve_citations(session, document)
+    _keep_hashes_of_unchanged_steps(instruction_set.document, document)
     document["agent_prompt"] = render_prompt(document)
     diff = _diff(instruction_set.document, document)
     if not diff:
