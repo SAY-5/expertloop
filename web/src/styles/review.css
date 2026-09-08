@@ -264,6 +264,8 @@
   fill: var(--plum);
   stroke: none;
   pointer-events: none;
+  transform-box: fill-box;
+  transform-origin: center;
 }
 
 .sm-legend {

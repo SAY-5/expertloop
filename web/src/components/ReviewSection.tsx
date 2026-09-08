@@ -20,8 +20,8 @@ const NODE: Record<State, { x: number; y: number }> = {
 
 const EDGE: Record<Action, { d: string; label: string; lx: number; ly: number }> = {
   submit: { d: "M138 170 L214 170", label: "submit", lx: 176, ly: 158 },
-  request_changes: { d: "M280 150 L280 78", label: "request changes", lx: 300, ly: 118 },
-  resubmit: { d: "M244 78 L244 150", label: "resubmit", lx: 224, ly: 118 },
+  request_changes: { d: "M280 150 L280 78", label: "request changes", lx: 336, ly: 118 },
+  resubmit: { d: "M244 78 L244 150", label: "resubmit", lx: 208, ly: 118 },
   approve: { d: "M310 170 L386 170", label: "approve", lx: 348, ly: 158 },
   edit_after_approval: { d: "M434 190 C 434 262, 90 262, 90 190", label: "edit", lx: 262, ly: 250 },
   publish: { d: "M482 170 L558 170", label: "publish", lx: 520, ly: 158 },
