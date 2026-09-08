@@ -1,0 +1,48 @@
+[project]
+name = "expertloop"
+version = "0.1.0"
+description = "Turns expert task notes into agent instructions with linked sources, tracks edits and approval state in PostgreSQL, and gates approved workflows behind test cases before they reach business systems"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "SAY-5", email = "say.apm35@gmail.com" }]
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "sqlalchemy>=2.0",
+    "alembic>=1.13",
+    "psycopg[binary]>=3.2",
+    "pydantic>=2.8",
+    "pydantic-settings>=2.4",
+    "structlog>=24.1",
+    "httpx>=0.27",
+    "prometheus-client>=0.20",
+]
+
+[project.scripts]
+expertloop-demo = "expertloop.demo:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "ruff>=0.6",
+    "testcontainers[postgres]>=4.8",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["expertloop"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
