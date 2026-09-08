@@ -402,10 +402,13 @@ class Demo:
             for r in self.call("ravi", "GET", f"/instruction-sets/{s['id']}/test-runs")
         ]
         pubs = [
-            p
+            {**p, "set_id": s["id"]}
             for s in sets
             for p in self.call("ravi", "GET", f"/instruction-sets/{s['id']}/publications")
         ]
+        delivered = [p for p in pubs if p["action"] == "publish" and p["status"] == "delivered"]
+        versions = {(p["set_id"], p["version"]) for p in delivered}
+        rollbacks = {(p["set_id"], p["version"]) for p in pubs if p["action"] == "rollback"}
         received = self.fakes.get("/_received").json()
         print(f"  notes ingested:        {len(sets)}")
         print(f"  steps compiled:        {steps}")
@@ -421,7 +424,7 @@ class Demo:
         )
         print(f"  publishes blocked:     {self.blocked}")
         print(
-            f"  publishes delivered:   {sum(1 for p in pubs if p['action'] == 'publish' and p['status'] == 'delivered')} deliveries ({len({(p['instruction_set_id'] if 'instruction_set_id' in p else 0, p['version']) for p in pubs if p['action'] == 'publish'})} versions), rollbacks: {sum(1 for p in pubs if p['action'] == 'rollback') // 2}"
+            f"  publishes delivered:   {len(delivered)} deliveries ({len(versions)} versions to 2 targets), rollbacks: {len(rollbacks)}"
         )
         print(
             f"  receipts:              {len(received['webhook'])} webhook (signed), {len(received['jira_comments'])} Jira comments, {len(received['jira_attachments'])} Jira attachments"

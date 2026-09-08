@@ -45,6 +45,9 @@ target-version = "py312"
 select = ["E", "F", "I", "B", "UP", "SIM"]
 ignore = ["B008"]  # FastAPI dependency defaults
 
+[tool.ruff.lint.per-file-ignores]
+"expertloop/demo.py" = ["E501"]  # long print lines in the demo driver
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
