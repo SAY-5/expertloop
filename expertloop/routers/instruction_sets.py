@@ -1,6 +1,6 @@
 from typing import Any
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import PlainTextResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -12,12 +12,15 @@ from expertloop.db import get_session
 from expertloop.models import InstructionSet, InstructionSetVersion
 from expertloop.schemas import (
     AuditOut,
+    BranchIn,
     DriftFlagOut,
     DriftOut,
     EditIn,
     EditOut,
     InstructionSetOut,
     InstructionSetSummary,
+    MergeIn,
+    MergeOut,
     PolicyIn,
     PublicationOut,
     PublishOut,
@@ -75,6 +78,52 @@ def get_citations(
         "unverified": sum(1 for r in report if not r["verified"]),
         "citations": report,
     }
+
+
+@router.get("/{instruction_set_id}/diff")
+def diff(
+    instruction_set_id: int,
+    from_version: int = Query(alias="from", ge=1),
+    to_version: int = Query(alias="to", ge=1),
+    session: Session = Depends(get_session),
+    _: Principal = Depends(read_roles),
+) -> dict[str, Any]:
+    """Step-level diff between two stored versions."""
+    return service.diff_versions(session, instruction_set_id, from_version, to_version)
+
+
+@router.post("/{instruction_set_id}/branch", response_model=InstructionSetOut, status_code=201)
+def branch(
+    instruction_set_id: int,
+    body: BranchIn,
+    session: Session = Depends(get_session),
+    principal: Principal = Depends(require_role("expert")),
+) -> InstructionSet:
+    """Copy a version (default: the published one) into a new draft for experimentation."""
+    return service.branch(session, principal, instruction_set_id, body.name, body.from_version)
+
+
+@router.get("/{instruction_set_id}/branches", response_model=list[InstructionSetSummary])
+def list_branches(
+    instruction_set_id: int,
+    session: Session = Depends(get_session),
+    _: Principal = Depends(read_roles),
+) -> Any:
+    return service.get_instruction_set(session, instruction_set_id).branches
+
+
+@router.post("/{instruction_set_id}/merge", response_model=MergeOut)
+def merge(
+    instruction_set_id: int,
+    body: MergeIn,
+    session: Session = Depends(get_session),
+    principal: Principal = Depends(require_role("expert")),
+) -> MergeOut:
+    """Merge this branch into its parent; 409 lists the conflicting steps and fields."""
+    parent, edit, summary = service.merge(
+        session, principal, instruction_set_id, body.reason, body.expected_parent_version
+    )
+    return MergeOut(instruction_set=parent, edit=EditOut.model_validate(edit), summary=summary)
 
 
 @router.get("/{instruction_set_id}/drift", response_model=DriftOut)

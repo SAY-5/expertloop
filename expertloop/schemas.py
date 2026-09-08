@@ -76,6 +76,10 @@ class InstructionSetOut(BaseModel):
     submitted_at: datetime | None
     review_deadline_at: datetime | None
     escalated_at: datetime | None
+    parent_id: int | None
+    branched_from_version: int | None
+    merged_at: datetime | None
+    merged_into_version: int | None
     document: dict[str, Any]
     created_at: datetime
     updated_at: datetime
@@ -94,6 +98,10 @@ class InstructionSetSummary(BaseModel):
     review_policy: dict[str, Any]
     review_deadline_at: datetime | None
     escalated_at: datetime | None
+    parent_id: int | None
+    branched_from_version: int | None
+    merged_at: datetime | None
+    merged_into_version: int | None
 
 
 class IngestOut(BaseModel):
@@ -280,3 +288,19 @@ class DriftOut(BaseModel):
 
 class VerifyIn(BaseModel):
     step_ids: list[str] | None = None
+
+
+class BranchIn(BaseModel):
+    name: str | None = Field(default=None, max_length=256)
+    from_version: int | None = Field(default=None, ge=1)
+
+
+class MergeIn(BaseModel):
+    reason: str | None = None
+    expected_parent_version: int | None = Field(default=None, ge=1)
+
+
+class MergeOut(BaseModel):
+    instruction_set: InstructionSetSummary
+    edit: EditOut
+    summary: dict[str, int]

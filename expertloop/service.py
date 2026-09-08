@@ -9,7 +9,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from expertloop import drift, metrics, reviews
+from expertloop import drift, metrics, reviews, versioning
 from expertloop.auth import Principal
 from expertloop.compiler import compile_note
 from expertloop.compiler.compile import citation_coverage, render_prompt, validate_document
@@ -25,6 +25,7 @@ from expertloop.models import (
     State,
     TestCase,
     TestRun,
+    utcnow,
 )
 from expertloop.sources import resolve_citations
 from expertloop.targets.base import DeliveryError, Target
@@ -140,22 +141,18 @@ def _keep_hashes_of_unchanged_steps(old: dict[str, Any], new: dict[str, Any]) ->
             step["citations"] = json.loads(json.dumps(before.get("citations", [])))
 
 
-def apply_edit(
+def _commit_document(
     session: Session,
     actor: Principal,
-    instruction_set_id: int,
-    expected_version: int,
-    reason: str,
+    instruction_set: InstructionSet,
     document: dict[str, Any],
+    reason: str,
+    action: str = "edit",
+    **detail: Any,
 ) -> Edit:
-    instruction_set = get_instruction_set(session, instruction_set_id)
+    """Validate a full document, store it as the next version and record the edit."""
     if instruction_set.state not in EDITABLE_STATES:
-        raise IllegalTransition("edit", instruction_set.state)
-    if instruction_set.version != expected_version:
-        raise Conflict(
-            f"version mismatch: expected {expected_version}, current is {instruction_set.version}",
-            {"current_version": instruction_set.version},
-        )
+        raise IllegalTransition(action, instruction_set.state)
     document = json.loads(json.dumps(document))
     problems = validate_document(document)
     if problems:
@@ -165,7 +162,7 @@ def apply_edit(
     document["agent_prompt"] = render_prompt(document)
     diff = _diff(instruction_set.document, document)
     if not diff:
-        raise Conflict("edit does not change the document")
+        raise Conflict(f"{action} does not change the document")
 
     from_state = instruction_set.state
     new_version = instruction_set.version + 1
@@ -194,16 +191,181 @@ def apply_edit(
         session,
         instruction_set,
         actor,
-        "edit",
+        action,
         from_state,
         instruction_set.state,
         from_version=edit.from_version,
         to_version=new_version,
         reason=reason,
         drift_resolved=[f.step_id for f in resolved],
+        **detail,
     )
+    return edit
+
+
+def apply_edit(
+    session: Session,
+    actor: Principal,
+    instruction_set_id: int,
+    expected_version: int,
+    reason: str,
+    document: dict[str, Any],
+) -> Edit:
+    instruction_set = get_instruction_set(session, instruction_set_id)
+    if instruction_set.state not in EDITABLE_STATES:
+        raise IllegalTransition("edit", instruction_set.state)
+    if instruction_set.version != expected_version:
+        raise Conflict(
+            f"version mismatch: expected {expected_version}, current is {instruction_set.version}",
+            {"current_version": instruction_set.version},
+        )
+    edit = _commit_document(session, actor, instruction_set, document, reason)
     session.commit()
     return edit
+
+
+def get_version(session: Session, instruction_set: InstructionSet, version: int) -> dict[str, Any]:
+    snapshot = session.scalar(
+        select(InstructionSetVersion).where(
+            InstructionSetVersion.instruction_set_id == instruction_set.id,
+            InstructionSetVersion.version == version,
+        )
+    )
+    if snapshot is None:
+        raise NotFound(f"instruction set {instruction_set.id} has no version {version}")
+    return snapshot.document
+
+
+def diff_versions(
+    session: Session, instruction_set_id: int, from_version: int, to_version: int
+) -> dict[str, Any]:
+    instruction_set = get_instruction_set(session, instruction_set_id)
+    old = get_version(session, instruction_set, from_version)
+    new = get_version(session, instruction_set, to_version)
+    return {
+        "instruction_set_id": instruction_set.id,
+        "from_version": from_version,
+        "to_version": to_version,
+        **versioning.diff_documents(old, new),
+    }
+
+
+def branch(
+    session: Session,
+    actor: Principal,
+    instruction_set_id: int,
+    name: str | None,
+    from_version: int | None,
+) -> InstructionSet:
+    """Copy a version of a set into a new draft that can be edited and merged back."""
+    parent = get_instruction_set(session, instruction_set_id)
+    if parent.parent_id is not None:
+        raise Conflict("branches cannot be branched again; branch the parent instead")
+    version = from_version or parent.published_version or parent.version
+    document = json.loads(json.dumps(get_version(session, parent, version)))
+    branch_name = name or f"{parent.name} (branch of v{version})"
+    document["name"] = branch_name
+    child = InstructionSet(
+        note_id=parent.note_id,
+        name=branch_name,
+        state=State.draft,
+        version=1,
+        required_approvals=parent.required_approvals,
+        review_policy=dict(parent.review_policy),
+        parent_id=parent.id,
+        branched_from_version=version,
+        document=document,
+    )
+    session.add(child)
+    session.flush()
+    session.add(InstructionSetVersion(instruction_set_id=child.id, version=1, document=document))
+    _audit(
+        session,
+        child,
+        actor,
+        "branch",
+        None,
+        State.draft,
+        parent_id=parent.id,
+        from_version=version,
+    )
+    _audit(
+        session,
+        parent,
+        actor,
+        "branched",
+        parent.state,
+        parent.state,
+        branch_id=child.id,
+        version=version,
+    )
+    session.commit()
+    return child
+
+
+def merge(
+    session: Session,
+    actor: Principal,
+    branch_id: int,
+    reason: str | None,
+    expected_parent_version: int | None,
+) -> tuple[InstructionSet, Edit, dict[str, Any]]:
+    """Three-way merge a branch head into its parent's head; 409 on conflicts."""
+    child = get_instruction_set(session, branch_id)
+    if child.parent_id is None:
+        raise Conflict(f"instruction set {child.id} is not a branch")
+    if child.merged_at is not None:
+        raise Conflict(
+            f"branch {child.id} was already merged into version {child.merged_into_version}"
+        )
+    parent = get_instruction_set(session, child.parent_id)
+    if expected_parent_version is not None and parent.version != expected_parent_version:
+        raise Conflict(
+            f"version mismatch: expected {expected_parent_version}, current is {parent.version}",
+            {"current_version": parent.version},
+        )
+    if parent.state not in EDITABLE_STATES:
+        raise IllegalTransition("merge", parent.state)
+    base = get_version(session, parent, child.branched_from_version or 1)
+    merged, conflicts = versioning.merge_documents(base, parent.document, child.document)
+    if conflicts:
+        _audit(
+            session,
+            parent,
+            actor,
+            "merge_conflict",
+            parent.state,
+            parent.state,
+            branch_id=child.id,
+            conflicts=[
+                {k: v for k, v in c.items() if k in ("kind", "step_id", "field", "reason")}
+                for c in conflicts
+            ],
+        )
+        session.commit()
+        raise Conflict(
+            f"merge blocked: {len(conflicts)} conflict(s) between branch {child.id} "
+            f"and version {parent.version}",
+            {"conflicts": conflicts, "branch_id": child.id, "parent_version": parent.version},
+        )
+    merged["name"] = parent.document.get("name", parent.name)
+    edit = _commit_document(
+        session,
+        actor,
+        parent,
+        merged,
+        reason or f"merge branch {child.id} ({child.name})",
+        action="merge",
+        branch_id=child.id,
+        branch_version=child.version,
+        base_version=child.branched_from_version,
+    )
+    child.merged_at = utcnow()
+    child.merged_into_version = parent.version
+    _audit(session, child, actor, "merged", child.state, child.state, into_version=parent.version)
+    session.commit()
+    summary = versioning.diff_documents(base, merged)["summary"]
+    return parent, edit, summary
 
 
 def reverify(
