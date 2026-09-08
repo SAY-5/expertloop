@@ -15,7 +15,8 @@ from typing import Any
 
 COMPARE_RE = re.compile(
     r"^(?P<field>[a-z_][a-z0-9_ ]*?)\s*"
-    r"(?P<op>>=|<=|==|!=|>|<|\bis not\b|\bis\b|\bcontains\b|\bequals\b|\bexceeds\b|\bover\b|\bunder\b|\bbelow\b|\babove\b)"
+    r"(?P<op>>=|<=|==|!=|>|<|\bis not\b|\bis\b|\bcontains\b|\bequals\b"
+    r"|\bexceeds\b|\bover\b|\bunder\b|\bbelow\b|\babove\b)"
     r"\s*(?P<value>.+)$",
     re.IGNORECASE,
 )
@@ -105,7 +106,9 @@ def evaluate_condition(condition: str, scenario: dict[str, Any]) -> bool:
     return False
 
 
-def _apply_rules(rules: list[dict[str, Any]], scenario: dict[str, Any], trace: ExecutionTrace, label: str) -> bool:
+def _apply_rules(
+    rules: list[dict[str, Any]], scenario: dict[str, Any], trace: ExecutionTrace, label: str
+) -> bool:
     """Fire matching rules. Return True when execution must halt."""
     for rule in rules:
         if evaluate_condition(rule["condition"], scenario):
@@ -138,7 +141,9 @@ def _contains(haystack: list[str], needle: str) -> bool:
     return any(needle in item.lower() for item in haystack)
 
 
-def run_test_case(document: dict[str, Any], scenario: dict[str, Any], expectations: dict[str, Any]) -> dict[str, Any]:
+def run_test_case(
+    document: dict[str, Any], scenario: dict[str, Any], expectations: dict[str, Any]
+) -> dict[str, Any]:
     trace = execute(document, scenario)
     failures: list[str] = []
     for needle in expectations.get("required_actions", []):

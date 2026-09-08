@@ -15,7 +15,7 @@ def utcnow() -> datetime:
     return datetime.now(UTC)
 
 
-class State(str, enum.Enum):
+class State(enum.StrEnum):
     draft = "draft"
     in_review = "in_review"
     changes_requested = "changes_requested"
@@ -59,6 +59,7 @@ class InstructionSet(Base):
     version: Mapped[int] = mapped_column(Integer, default=1)
     published_version: Mapped[int | None] = mapped_column(Integer)
     required_approvals: Mapped[int] = mapped_column(Integer, default=1)
+    review_round: Mapped[int] = mapped_column(Integer, default=0)
     document: Mapped[dict[str, Any]] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(
@@ -123,6 +124,7 @@ class ReviewDecision(Base):
     reviewer: Mapped[str] = mapped_column(String(128))
     reviewer_role: Mapped[str] = mapped_column(String(32))
     version: Mapped[int] = mapped_column(Integer)
+    review_round: Mapped[int] = mapped_column(Integer)
     decision: Mapped[str] = mapped_column(String(32))  # approve | request_changes
     comment: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

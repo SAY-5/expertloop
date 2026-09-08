@@ -71,9 +71,11 @@ def iter_citations(document: dict[str, Any]):
 def verify_citations(session: Session, document: dict[str, Any]) -> list[dict[str, Any]]:
     """Return a verification report for every citation in the document."""
     ids = {c["source_id"] for c in iter_citations(document) if c.get("source_id")}
-    sources = {
-        s.id: s for s in session.scalars(select(Source).where(Source.id.in_(ids))).all()
-    } if ids else {}
+    sources = (
+        {s.id: s for s in session.scalars(select(Source).where(Source.id.in_(ids))).all()}
+        if ids
+        else {}
+    )
     report: list[dict[str, Any]] = []
     for key in ("preconditions", "steps", "decision_rules", "forbidden_actions", "outcomes"):
         for entry in document.get(key, []):
@@ -83,7 +85,9 @@ def verify_citations(session: Session, document: dict[str, Any]) -> list[dict[st
                 row["entry"] = entry.get("id") or entry.get("text") or entry.get("condition")
                 if cite.get("source_id"):
                     source = sources.get(cite["source_id"])
-                    row["verified"] = bool(source and source.content_hash == cite.get("source_hash"))
+                    row["verified"] = bool(
+                        source and source.content_hash == cite.get("source_hash")
+                    )
                 else:
                     row["verified"] = True  # a bare line-range citation is always verifiable
                 report.append(row)

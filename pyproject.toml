@@ -42,6 +42,7 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM"]
+ignore = ["B008"]  # FastAPI dependency defaults
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

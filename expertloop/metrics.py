@@ -42,7 +42,9 @@ def refresh(session: Session) -> None:
     for state in State:
         instruction_sets_by_state.labels(state=state.value).set(counts.get(state, 0))
     totals = session.execute(
-        select(func.coalesce(func.sum(TestRun.passed), 0), func.coalesce(func.sum(TestRun.failed), 0))
+        select(
+            func.coalesce(func.sum(TestRun.passed), 0), func.coalesce(func.sum(TestRun.failed), 0)
+        )
     ).one()
     passed, failed = int(totals[0]), int(totals[1])
     test_pass_rate.set(passed / (passed + failed) if (passed + failed) else 0.0)

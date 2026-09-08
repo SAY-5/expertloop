@@ -2,10 +2,12 @@
 
     draft -> in_review -> changes_requested -> in_review -> approved -> published -> retired
 
-Editing is allowed in ``draft``, ``changes_requested`` and ``approved``; an edit to an
-approved set moves it back to ``draft`` so that approvals are collected again for the
-new version. Publishing additionally requires a green test run on the current version,
-which is enforced by the service layer, not by the transition table.
+Editing is allowed in ``draft``, ``changes_requested``, ``approved`` and ``published``.
+An edit to an approved set moves it back to ``draft`` so that approvals are collected
+again for the new version; an edit to a published set (``revise``) also moves the head
+to ``draft`` while ``published_version`` keeps pointing at the live version.
+Publishing additionally requires a green test run on the current version, which is
+enforced by the service layer, not by the transition table.
 """
 
 from __future__ import annotations
@@ -19,10 +21,11 @@ TRANSITIONS: dict[str, tuple[State, State]] = {
     "approve": (State.in_review, State.approved),
     "edit_after_approval": (State.approved, State.draft),
     "publish": (State.approved, State.published),
+    "revise": (State.published, State.draft),
     "retire": (State.published, State.retired),
 }
 
-EDITABLE_STATES = frozenset({State.draft, State.changes_requested, State.approved})
+EDITABLE_STATES = frozenset({State.draft, State.changes_requested, State.approved, State.published})
 
 
 class IllegalTransition(Exception):

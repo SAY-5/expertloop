@@ -54,7 +54,9 @@ class WebhookTarget:
         except httpx.HTTPError as exc:
             raise DeliveryError(f"webhook unreachable: {exc}") from exc
         if response.status_code >= 300:
-            raise DeliveryError(f"webhook rejected delivery: {response.status_code} {response.text}")
+            raise DeliveryError(
+                f"webhook rejected delivery: {response.status_code} {response.text}"
+            )
         try:
             receipt = response.json()
         except ValueError:

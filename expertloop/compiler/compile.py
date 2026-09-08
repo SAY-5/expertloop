@@ -12,7 +12,9 @@ from typing import Any
 
 from expertloop.compiler.parser import NoteItem, ParsedNote, SourceRef, parse_note
 
-TOOL_RE = re.compile(r"\b(?:in|via|using|through|open|call|from)\s+([A-Z][A-Za-z0-9]+(?:\s[A-Z][A-Za-z0-9]+)?)")
+TOOL_RE = re.compile(
+    r"\b(?:in|via|using|through|open|call|from)\s+([A-Z][A-Za-z0-9]+(?:\s[A-Z][A-Za-z0-9]+)?)"
+)
 RULE_RE = re.compile(r"^\s*(?:if|when)\s+(.+?)\s*(?:,|then)\s*(.+)$", re.IGNORECASE)
 FORBIDDEN_RE = re.compile(r"\b(?:never|do not|don't|must not)\s+(.+)", re.IGNORECASE)
 OUTCOME_RE = re.compile(r"\b(?:so that|until|expected:|result:)\s*(.+)$", re.IGNORECASE)

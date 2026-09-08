@@ -41,14 +41,22 @@ def build_fake_app(webhook_secret: str) -> FastAPI:
         body = await request.json()
         comment_id = str(10000 + next(counter))
         state["jira_comments"].append({"id": comment_id, "issue": issue_key, "body": body["body"]})
-        return {"id": comment_id, "self": f"/jira/rest/api/3/issue/{issue_key}/comment/{comment_id}"}
+        return {
+            "id": comment_id,
+            "self": f"/jira/rest/api/3/issue/{issue_key}/comment/{comment_id}",
+        }
 
     @app.post("/jira/rest/api/3/issue/{issue_key}/attachments")
     async def jira_attachment(issue_key: str, file: UploadFile = File(...)) -> list[dict[str, Any]]:
         content = await file.read()
         attachment_id = str(20000 + next(counter))
         state["jira_attachments"].append(
-            {"id": attachment_id, "issue": issue_key, "filename": file.filename, "size": len(content)}
+            {
+                "id": attachment_id,
+                "issue": issue_key,
+                "filename": file.filename,
+                "size": len(content),
+            }
         )
         return [{"id": attachment_id, "filename": file.filename, "size": len(content)}]
 
