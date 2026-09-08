@@ -439,7 +439,7 @@ class Demo:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="ExpertLoop end-to-end demo")
-    parser.add_argument("--api", default="http://localhost:8080")
+    parser.add_argument("--api", default="http://localhost:8090")
     parser.add_argument("--fakes", default="http://localhost:8081")
     args = parser.parse_args()
     demo = Demo(args.api, args.fakes)

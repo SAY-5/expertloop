@@ -1,5 +1,5 @@
 COMPOSE := docker compose -f deploy/docker-compose.yml
-API_URL ?= http://localhost:8080
+API_URL ?= http://localhost:8090
 FAKES_URL ?= http://localhost:8081
 
 .PHONY: setup lint format test migrate up down demo
