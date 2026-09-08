@@ -131,6 +131,21 @@ counted in `expertloop_publishes_total{result="blocked"}` and audited as
 `publish_blocked`. An edit after approval moves the set back to `draft`, so a fix always
 goes through review and a fresh run before it can reach a business system.
 
+## Executor plugins and coverage
+
+`expertloop/executor/plugins.py` holds the condition registry. `evaluate_condition`
+normalises the text and asks each plugin in order; the first one that returns a boolean
+wins and an unanswered condition is false. The built-ins are `flags` (exact text in the
+scenario's flags), `membership` (`x is one of a, b`, `x in (a, b)`) and `compare` (the
+original comparison grammar). Because `compare` accepts any `x is y`, a plugin with its
+own grammar registers with `first=True`.
+
+Every execution trace records `steps_executed` and `rules_fired_ids` (`global:<i>`,
+`<step>:<i>`). `expertloop/executor/coverage.py` executes each test case scenario against
+the current document and counts hits per step and per decision rule; the report lists
+uncovered steps and rules, and `run_tests` stores a summary on the run so `/ops/overview`
+can rank sets by coverage without re-executing anything.
+
 ## Publish and rollback
 
 `expertloop/targets/` delivers the version snapshot to every configured target and stores

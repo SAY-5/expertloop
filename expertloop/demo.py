@@ -382,6 +382,32 @@ class Demo:
             f"  set {onboarding}: live version is now v{out['instruction_set']['published_version']}"
         )
 
+    def overview(self) -> None:
+        self.section("Ops overview")
+        overview = self.call("ravi", "GET", "/ops/overview")
+        by_state = ", ".join(
+            f"{k}={v}" for k, v in overview["instruction_sets"]["by_state"].items() if v
+        )
+        print(f"  sets:                  {overview['instruction_sets']['total']} ({by_state})")
+        coverage = overview["coverage"]
+        print(
+            f"  coverage:              steps {coverage['average_step_coverage']:.0%}, decision rules {coverage['average_rule_coverage']:.0%} across {coverage['sets_with_runs']} sets"
+        )
+        for low in coverage["lowest"]:
+            print(
+                f"    set {low['instruction_set_id']} v{low['version']}: steps {low['steps']:.0%}, uncovered {low['uncovered_steps'] or 'none'}"
+            )
+        print(
+            f"  drift:                 {overview['drift']['open_flags']} open flags, stale sets {overview['drift']['stale_sets'] or 'none'}"
+        )
+        print(
+            f"  reviews:               {overview['reviews']['in_review']} in review, {overview['reviews']['overdue']} overdue, {overview['reviews']['escalated']} escalated"
+        )
+        print(
+            f"  publish:               {overview['publish']['delivered']} delivered, {overview['publish']['blocked']} blocked, {overview['publish']['rollbacks']} rollbacks, {overview['publish']['published_sets']} sets live"
+        )
+        print(f"  executor plugins:      {', '.join(overview['executor_plugins'])}")
+
     def summary(self) -> None:
         self.section("Summary")
         sets = [self.call("ravi", "GET", f"/instruction-sets/{i}") for i in self.sets.values()]
@@ -451,6 +477,7 @@ def main() -> None:
     demo.review()
     demo.gate()
     demo.rollback()
+    demo.overview()
     demo.summary()
 
 

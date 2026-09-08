@@ -42,6 +42,12 @@ Prometheus metrics.
 * **Reach business systems.** `publish` delivers the version snapshot to a signed webhook
   target and a Jira comment plus attachment target, records receipts per target, and
   `rollback` re-delivers the previous published version.
+* **Executor plugins, coverage and ops overview.** Executor conditions are evaluated by
+  a small plugin registry (`flags`, `membership`, `compare` built in; register your own
+  with `expertloop.executor.registry.register`). `GET /instruction-sets/{id}/coverage`
+  reports which steps and decision rules the test cases exercise, every test run stores
+  its coverage, and `GET /ops/overview` aggregates sets by state, coverage, drift,
+  review SLAs and publish statistics.
 * **Version diff and branching.** `GET /instruction-sets/{id}/diff?from=1&to=3` returns
   a structured, step-level diff (added, removed and changed steps with per-field before
   and after, plus section entries). `POST /instruction-sets/{id}/branch` copies a version
@@ -144,18 +150,25 @@ All endpoints take `X-API-Key`. `admin` may call everything.
 | POST | `/reviews/escalate` | reviewer | Escalate every overdue review once; the scheduler runs this too |
 | POST | `/instruction-sets/{id}/test-cases` | expert, reviewer | Add a test case (`scenario`, `expectations`) |
 | POST | `/instruction-sets/{id}/run-tests` | expert, reviewer | Execute all cases on the current version |
-| GET | `/instruction-sets/{id}/test-cases`, `/test-runs` | expert, reviewer | Cases and recorded runs |
+| GET | `/instruction-sets/{id}/test-cases`, `/test-runs` | expert, reviewer | Cases and recorded runs (each run carries its coverage) |
+| GET | `/instruction-sets/{id}/coverage` | expert, reviewer | Steps and decision rules exercised by the test cases on the current version |
 | POST | `/instruction-sets/{id}/publish` | admin | Deliver to targets; 409 when not approved, stale, or latest run is not green |
 | POST | `/instruction-sets/{id}/rollback` | admin | Re-deliver the previous published version |
 | POST | `/instruction-sets/{id}/retire` | admin | `published` to `retired` |
 | GET | `/instruction-sets/{id}/publications` | expert, reviewer | Delivery receipts |
+| GET | `/ops/overview` | expert, reviewer | Sets by state, coverage of latest runs, open drift, review SLAs, publish stats |
+| GET | `/ops/plugins` | expert, reviewer | Registered executor condition plugins in evaluation order |
 | GET | `/healthz`, `/metrics` | none | Health and Prometheus metrics |
 
 Test case expectations: `required_actions`, `forbidden_actions`, `expected_outcomes`,
 `expected_tools` (substring matches against the execution trace), `must_halt`,
 `must_complete`. Scenarios carry `facts` (compared by conditions such as
 `amount is over 500`, `reason is fraud`, `error rate exceeds 5 percent`) and `flags`
-(free-text conditions that are simply true).
+(free-text conditions that are simply true). Conditions are evaluated by the plugin
+registry in `expertloop/executor/plugins.py`: a plugin returns True or False when it
+understands a condition and None to pass; `flags`, `membership` (`role is one of admin,
+owner`) and `compare` ship built in, and `registry.register(plugin, first=True)` puts a
+custom grammar ahead of them.
 
 ## Data model
 
@@ -169,7 +182,7 @@ Test case expectations: `required_actions`, `forbidden_actions`, `expected_outco
 | `review_decisions` | Reviewer, role, version, review round, decision, comment |
 | `audit_events` | Actor, action, from/to state, detail for every change |
 | `test_cases` | Name, author, scenario, expectations |
-| `test_runs` | Version covered, status, pass/fail counts, per-case results and traces |
+| `test_runs` | Version covered, status, pass/fail counts, per-case results and traces, coverage summary |
 | `publications` | Version, action (`publish`, `rollback`), target, status, receipt |
 | `drift_flags` | Step, source, cited and current hash, detected by and at, resolution (`reverified`, `edited`) |
 
@@ -189,10 +202,10 @@ expertloop/
   compiler/    note parser and rule-based compiler with citations
   sources/     source registry and citation verification
   workflow/    approval state machine
-  executor/    deterministic executor and test case runner
+  executor/    deterministic executor, condition plugin registry, test runner, coverage
   targets/     signed webhook and Jira delivery adapters
   fakes/       fake webhook receiver and Jira for demos and tests
-  routers/     FastAPI routes
+  routers/     FastAPI routes (sources, notes, instruction sets, reviews, ops)
   drift.py     source re-hashing, drift flags and the scan scheduler
   reviews.py   review policies, deadlines, escalation and reviewer workload
   versioning.py step-level diff and three-way merge of documents
@@ -207,7 +220,30 @@ tests/         pytest suite (PostgreSQL via Testcontainers)
 See `ARCHITECTURE.md` for the compiler, citation, state machine, gating and delivery
 design, and `CONTRIBUTING.md` for the development workflow.
 
+## Releases
+
+| Version | Theme | Adds |
+| --- | --- | --- |
+| 1.0.0 | Compile, review, gate, deliver | Deterministic note compiler with citations, source registry with hashes, edit history with optimistic concurrency, review state machine, test-case publish gate, signed webhook and Jira targets, rollback |
+| 2.0.0 | Source drift | Re-hash sources on demand or on a schedule, stale flags on citing steps, publish blocked until re-verified or edited, `GET /instruction-sets/{id}/drift` |
+| 3.0.0 | Review policies and SLAs | Required reviewer roles, no self-approval, review deadlines with escalation events, `GET /reviews/workload` |
+| 4.0.0 | Diff and branching | Step-level diff between versions, branch a draft from a published version, merge back with conflict detection |
+| 5.0.0 | Plugins, coverage, ops | Executor condition plugin registry, test coverage report per set and per run, `GET /ops/overview` |
+
+Each release ships with its Alembic migration, tests against PostgreSQL, and a changelog
+entry below. Tags are `v1.0.0` through `v5.0.0`.
+
 ## Changelog
+
+### 5.0.0
+
+* Executor conditions go through a plugin registry (`flags`, `membership`, `compare`
+  built in); deployments register their own grammars.
+* `GET /instruction-sets/{id}/coverage` reports the steps and decision rules the test
+  cases exercise; every test run stores a coverage summary.
+* `GET /ops/overview` aggregates sets by state, coverage, drift, review SLAs and publish
+  statistics; `GET /ops/plugins` lists the registry.
+* Migration `0005` adds `test_runs.coverage`.
 
 ### 4.0.0
 
