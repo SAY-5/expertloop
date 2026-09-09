@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -p tsconfig.json && vite build",
     "preview": "vite preview",
-    "selfcheck": "tsx src/sim/selfcheck.ts"
+    "selfcheck": "tsx src/sim/selfcheck.ts",
+    "verify": "npm run selfcheck && npm run build"
   },
   "dependencies": {
     "framer-motion": "^12.23.12",
