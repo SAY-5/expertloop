@@ -9,8 +9,6 @@ from dataclasses import dataclass
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import APIKeyHeader
 
-from expertloop.config import get_settings
-
 ROLES = ("expert", "reviewer", "admin")
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
@@ -24,7 +22,7 @@ class Principal:
 def authenticate(request: Request, key: str | None = Depends(api_key_header)) -> Principal:
     if not key:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "missing X-API-Key header")
-    keys = getattr(request.app.state, "api_keys", None) or get_settings().parsed_api_keys()
+    keys = getattr(request.app.state, "api_keys", ())
     for entry in keys:
         if hmac.compare_digest(entry.key, key):
             if entry.role not in ROLES:

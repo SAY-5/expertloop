@@ -22,7 +22,7 @@ services:
     environment:
       EXPERTLOOP_WEBHOOK_SECRET: demo-webhook-secret
     ports:
-      - "8081:8081"
+      - "127.0.0.1:8081:8081"
 
   api:
     build:
@@ -41,7 +41,7 @@ services:
       fakes:
         condition: service_started
     ports:
-      - "8090:8080"
+      - "127.0.0.1:8090:8080"
 
 volumes:
   pgdata:
