@@ -206,6 +206,10 @@ pre,
     box-shadow 0.25s var(--ease);
 }
 
+a.btn {
+  text-decoration: none;
+}
+
 .btn:hover:not(:disabled) {
   transform: translateY(-1px);
   background: rgba(255, 233, 250, 0.08);
