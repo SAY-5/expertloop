@@ -245,7 +245,8 @@ export function DriftSection() {
               <p className="drift-doc-hash mono">sha256:{source?.content_hash.slice(0, 32)}</p>
               <div className={`drift-state drift-state-${gate}`} aria-live="polite">
                 {staleCount
-                  ? `publish is blocked: ${report.stale_steps.join(", ")} cite a changed source`
+                  ? `publish is blocked: ${report.stale_steps.length === 1 ? "step" : "steps"} ${report.stale_steps.join(", ")} ` +
+                    `${report.stale_steps.length === 1 ? "cites" : "cite"} a changed source`
                   : set.state === "published"
                     ? `published: live v${set.published_version}`
                     : "publish gate is clear on the drift check"}

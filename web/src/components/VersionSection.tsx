@@ -85,7 +85,7 @@ export function VersionSection() {
       setConflicts([]);
       push(
         "ok",
-        `merged branch ${branch.id} into v${out.edit.to_version}: ${out.summary.steps_changed} step(s) changed, ${out.summary.entries_added} entry added`,
+        `merged branch ${branch.id} into v${out.edit.to_version}: ${out.summary.steps_changed} step${out.summary.steps_changed === 1 ? "" : "s"} changed`,
       );
       setTo(out.edit.to_version);
       toast(`Branch ${branch.id} merged into v${out.edit.to_version}`, "ok");
@@ -135,7 +135,8 @@ export function VersionSection() {
         </div>
 
         <div className="versions-grid">
-          <div className="glass version-diff-card">
+          <div className="versions-main">
+            <div className="glass version-diff-card">
             <div className="panel-head">
               <div>
                 <span className="eyebrow">structured diff, set {parent.id}</span>
@@ -181,11 +182,17 @@ export function VersionSection() {
               </label>
               {diff ? (
                 <div className="version-summary" aria-live="polite">
-                  <span className="chip chip-plum">{diff.summary.steps_changed} steps changed</span>
+                  <span className="chip chip-plum">
+                    {diff.summary.steps_changed} step{diff.summary.steps_changed === 1 ? "" : "s"} changed
+                  </span>
                   <span className="chip">{diff.summary.steps_added} added</span>
                   <span className="chip">{diff.summary.steps_removed} removed</span>
-                  <span className="chip">{diff.summary.entries_added} entries added</span>
-                  <span className="chip">{diff.summary.fields_changed} fields changed</span>
+                  <span className="chip">
+                    {diff.summary.entries_added} entr{diff.summary.entries_added === 1 ? "y" : "ies"} added
+                  </span>
+                  <span className="chip">
+                    {diff.summary.fields_changed} field{diff.summary.fields_changed === 1 ? "" : "s"} changed
+                  </span>
                 </div>
               ) : (
                 <span className="chip">pick two versions to compare</span>
@@ -212,6 +219,30 @@ export function VersionSection() {
                 </li>
               ))}
             </ul>
+          </div>
+            <div className="glass version-log">
+              <div className="panel-head">
+                <span className="eyebrow">branch log</span>
+                <span className="chip">{service.editsFor(parentId).length} parent edits</span>
+              </div>
+              <ul className="ledger-list" aria-live="polite">
+                {log.length === 0 ? <li className="feed-empty">Branch, edit both sides, then merge.</li> : null}
+                <AnimatePresence initial={false}>
+                  {log.map((line) => (
+                    <motion.li
+                      key={line.id}
+                      className={`feed-item feed-${line.kind}`}
+                      initial={reduced ? false : { opacity: 0, y: -8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.25 }}
+                    >
+                      {line.text}
+                    </motion.li>
+                  ))}
+                </AnimatePresence>
+              </ul>
+            </div>
           </div>
 
           <div className="versions-side">
@@ -281,7 +312,7 @@ export function VersionSection() {
                   : branch.merged_at !== null
                     ? `Branch ${branch.id} landed in v${branch.merged_into_version} and cannot be merged twice.`
                     : preview.length
-                      ? `${preview.length} field(s) would conflict right now.`
+                      ? `${preview.length} field${preview.length === 1 ? "" : "s"} would conflict right now.`
                       : "A merge would apply cleanly right now."}
               </p>
             </div>
@@ -325,30 +356,6 @@ export function VersionSection() {
                 </motion.div>
               ) : null}
             </AnimatePresence>
-
-            <div className="glass version-log">
-              <div className="panel-head">
-                <span className="eyebrow">branch log</span>
-                <span className="chip">{service.editsFor(parentId).length} parent edits</span>
-              </div>
-              <ul className="ledger-list" aria-live="polite">
-                {log.length === 0 ? <li className="feed-empty">Branch, edit both sides, then merge.</li> : null}
-                <AnimatePresence initial={false}>
-                  {log.map((line) => (
-                    <motion.li
-                      key={line.id}
-                      className={`feed-item feed-${line.kind}`}
-                      initial={reduced ? false : { opacity: 0, y: -8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.25 }}
-                    >
-                      {line.text}
-                    </motion.li>
-                  ))}
-                </AnimatePresence>
-              </ul>
-            </div>
           </div>
         </div>
       </div>

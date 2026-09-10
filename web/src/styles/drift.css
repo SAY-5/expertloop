@@ -196,3 +196,8 @@
     grid-template-columns: 1fr;
   }
 }
+
+.drift-table td .chip,
+.drift-ref {
+  white-space: nowrap;
+}

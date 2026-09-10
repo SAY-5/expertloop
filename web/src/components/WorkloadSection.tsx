@@ -51,7 +51,7 @@ export function WorkloadSection() {
       for (const set of escalated) {
         push("bad", `set ${set.id} escalated: deadline ${formatInstant(set.review_deadline_at)} passed on round ${set.review_round}`);
       }
-      toast(`${escalated.length} overdue review escalated`, "bad");
+      toast(`${escalated.length} overdue review${escalated.length === 1 ? "" : "s"} escalated`, "bad");
     }
     bump();
   };
@@ -158,7 +158,7 @@ export function WorkloadSection() {
                         </span>
                         {row.missing_roles.map((role) => (
                           <span key={role} className="chip chip-warn">
-                            needs a {role}
+                            needs {"aeiou".includes(role[0]) ? "an" : "a"} {role}
                           </span>
                         ))}
                         <span className={`chip ${row.overdue ? "chip-bad" : "chip-ok"}`}>

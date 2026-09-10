@@ -30,7 +30,8 @@
   display: grid;
   gap: 4px;
   align-content: start;
-  max-height: 520px;
+  min-height: 430px;
+  max-height: 560px;
   overflow-y: auto;
   overflow-x: auto;
   border-radius: var(--radius-sm);
@@ -132,4 +133,12 @@
   .run-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.run-summary-top {
+  margin-bottom: 20px;
+}
+
+.run-summary-top .run-block {
+  font-size: 0.76rem;
 }

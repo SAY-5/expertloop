@@ -70,6 +70,21 @@ export function RunSection() {
           </span>
         </div>
 
+        <div className="glass run-summary-card run-summary-top">
+          <div className="panel-head">
+            <div>
+              <span className="eyebrow">summary computed from the records</span>
+              <h3>What the demo prints</h3>
+            </div>
+            <span className={`chip ${matches ? "chip-ok" : "chip-bad"}`}>
+              {matches ? "matches the README block character for character" : "differs from the README block"}
+            </span>
+          </div>
+          <pre className="run-block" aria-label="demo summary block">
+            {block}
+          </pre>
+        </div>
+
         <div className="run-grid">
           <div className="glass run-log-card">
             <div className="panel-head">
@@ -108,18 +123,6 @@ export function RunSection() {
           </div>
 
           <div className="run-side">
-            <div className="glass run-summary-card">
-              <div className="panel-head">
-                <span className="eyebrow">summary</span>
-                <span className={`chip ${matches ? "chip-ok" : "chip-bad"}`}>
-                  {matches ? "matches the README" : "differs from the README"}
-                </span>
-              </div>
-              <pre className="run-block" aria-label="demo summary block">
-                {block}
-              </pre>
-            </div>
-
             <div className="glass run-numbers">
               <span className="eyebrow">computed from the records</span>
               <dl className="run-dl">

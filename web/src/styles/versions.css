@@ -216,3 +216,10 @@
     grid-template-columns: 1fr;
   }
 }
+
+.versions-main {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+  align-content: start;
+}
