@@ -1,0 +1,166 @@
+/* 04 / Review policy and workload: virtual clock, review queue and reviewer load. */
+
+.workload-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 22px;
+  margin-bottom: 20px;
+}
+
+.clock {
+  display: grid;
+  gap: 2px;
+  margin-right: auto;
+}
+
+.clock-value {
+  font-size: 1.05rem;
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+
+.workload-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.workload-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.queue-card,
+.reviewer-card,
+.workload-log {
+  padding: 22px;
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.queue-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.queue-row {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: rgba(255, 233, 250, 0.02);
+}
+
+.queue-row.overdue {
+  border-color: rgba(255, 111, 142, 0.4);
+  background: rgba(255, 111, 142, 0.06);
+}
+
+.queue-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.queue-name {
+  font-family: var(--display);
+  font-size: 1.15rem;
+}
+
+.queue-meta,
+.queue-waiting,
+.queue-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.queue-label {
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-mute);
+}
+
+.queue-actions {
+  padding-top: 4px;
+  border-top: 1px dashed var(--line);
+  gap: 4px;
+}
+
+.queue-actions .btn {
+  padding: 6px 10px;
+  font-size: 0.8rem;
+}
+
+.workload-side {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+
+.reviewer-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.reviewer {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+}
+
+.reviewer-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.98rem;
+}
+
+.reviewer-load {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.reviewer-sets {
+  color: var(--text-mute);
+  font-size: 0.72rem;
+}
+
+.workload-hint {
+  font-size: 0.8rem;
+  color: var(--text-mute);
+}
+
+@media (max-width: 1020px) {
+  .workload-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .workload-controls {
+    align-items: flex-start;
+  }
+
+  .clock {
+    margin-right: 0;
+  }
+}

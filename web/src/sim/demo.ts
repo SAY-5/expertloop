@@ -89,6 +89,23 @@ export function addTestCases(world: DemoWorld, log: DemoLine[] = []): void {
   }
 }
 
+/** All three notes ingested with their sources and test cases; nothing reviewed yet. */
+export function createSeededWorld(): DemoWorld {
+  const world = createWorld();
+  registerSources(world);
+  ingestAll(world);
+  addTestCases(world);
+  return world;
+}
+
+/** A seeded world where the onboarding set is approved with a green run on v1. */
+export function createApprovedWorld(): DemoWorld {
+  const world = createSeededWorld();
+  reviewRound(world, world.sets.onboarding, ["ravi"]);
+  runTests(world, world.sets.onboarding);
+  return world;
+}
+
 export function edit(world: DemoWorld, setId: number, reason: string, mutate: (doc: InstructionDocument) => void, log: DemoLine[] = []): void {
   const current = world.service.getSet(setId);
   const document = JSON.parse(JSON.stringify(current.document)) as InstructionDocument;

@@ -1,0 +1,135 @@
+/* 07 / The whole run: the replayed event log and the summary block. */
+
+.run-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.run-log-card,
+.run-summary-card,
+.run-numbers {
+  padding: 22px;
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.run-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.run-log {
+  list-style: none;
+  margin: 0;
+  padding: 14px;
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  max-height: 520px;
+  overflow-y: auto;
+  overflow-x: auto;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: rgba(9, 6, 11, 0.5);
+  scroll-behavior: auto;
+}
+
+.run-line {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.run-section {
+  display: block;
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--plum);
+}
+
+.run-line:first-child .run-section {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.run-ok {
+  color: var(--ok);
+}
+
+.run-fail,
+.run-blocked {
+  color: var(--bad);
+}
+
+.run-side {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+
+.run-block {
+  margin: 0;
+  padding: 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: rgba(9, 6, 11, 0.5);
+  color: var(--text-dim);
+  font-size: 0.74rem;
+  line-height: 1.6;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.run-dl {
+  margin: 0;
+  display: grid;
+  gap: 0;
+}
+
+.run-dl-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 7px 0;
+  border-bottom: 1px dashed var(--line);
+  font-size: 0.88rem;
+}
+
+.run-dl-row:last-child {
+  border-bottom: 0;
+}
+
+.run-dl dt {
+  color: var(--text-dim);
+}
+
+.run-dl dd {
+  margin: 0;
+  color: var(--text);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.run-states {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+@media (max-width: 1020px) {
+  .run-grid {
+    grid-template-columns: 1fr;
+  }
+}

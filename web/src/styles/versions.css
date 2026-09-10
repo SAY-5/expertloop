@@ -1,0 +1,218 @@
+/* 05 / Versions: the version rail, the structured field diff and the conflict card. */
+
+.versions-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.version-diff-card {
+  padding: 22px;
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.version-rail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: rgba(255, 233, 250, 0.02);
+}
+
+.rail-node {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  border: 1px solid var(--line-strong);
+  color: var(--text-dim);
+}
+
+.rail-node.base {
+  border-color: rgba(255, 233, 250, 0.35);
+  color: var(--text);
+}
+
+.rail-node.current {
+  border-color: rgba(224, 79, 214, 0.55);
+  background: var(--plum-soft);
+  color: var(--plum);
+}
+
+.rail-branch {
+  border-style: dashed;
+  border-color: rgba(242, 198, 109, 0.5);
+  color: var(--warn);
+}
+
+.rail-branch.merged {
+  border-color: rgba(123, 224, 164, 0.45);
+  color: var(--ok);
+}
+
+.version-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.field-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.field-inline select {
+  min-width: 84px;
+}
+
+.version-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.version-changes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.version-change {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: rgba(255, 233, 250, 0.02);
+  justify-items: start;
+}
+
+.version-fields {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+  width: 100%;
+}
+
+.version-fields li {
+  display: grid;
+  gap: 4px;
+  font-size: 0.85rem;
+}
+
+.version-field {
+  color: var(--text-mute);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.version-before,
+.version-after {
+  padding: 7px 10px;
+  border-radius: 8px;
+  overflow-wrap: anywhere;
+  border-left: 3px solid transparent;
+}
+
+.version-before {
+  background: rgba(255, 111, 142, 0.1);
+  border-left-color: rgba(255, 111, 142, 0.5);
+  color: #ffc4d0;
+}
+
+.version-after {
+  background: rgba(123, 224, 164, 0.1);
+  border-left-color: rgba(123, 224, 164, 0.5);
+  color: #c4f0d8;
+}
+
+.versions-side {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+
+.version-panel,
+.conflict-card,
+.version-log {
+  padding: 22px;
+  display: grid;
+  gap: 12px;
+}
+
+.version-actions {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+
+.version-actions .btn {
+  width: 100%;
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.version-hint {
+  font-size: 0.82rem;
+  color: var(--text-mute);
+}
+
+.conflict-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.conflict {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 111, 142, 0.35);
+  background: rgba(255, 111, 142, 0.06);
+  justify-items: start;
+}
+
+.conflict-side {
+  display: grid;
+  gap: 2px;
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  overflow-wrap: anywhere;
+}
+
+.conflict-label {
+  color: var(--text-mute);
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.conflict-reason {
+  font-size: 0.78rem;
+  color: var(--bad);
+}
+
+@media (max-width: 1020px) {
+  .versions-grid {
+    grid-template-columns: 1fr;
+  }
+}

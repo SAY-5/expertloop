@@ -27,7 +27,7 @@
   --bad: #ff6f8e;
   --bad-soft: rgba(255, 111, 142, 0.16);
   --display: "Instrument Serif", Georgia, "Times New Roman", serif;
-  --body: "Bricolage Grotesque", "Helvetica Neue", Helvetica, sans-serif;
+  --body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --mono: "JetBrains Mono", "SFMono-Regular", Menlo, monospace;
   --radius: 18px;
   --radius-sm: 10px;
@@ -136,6 +136,25 @@ pre,
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
+}
+
+.skip-link {
+  position: absolute;
+  left: 16px;
+  top: -120px;
+  z-index: 100;
+  padding: 12px 18px;
+  border-radius: 0 0 12px 12px;
+  background: var(--plum);
+  color: #190a17;
+  font-weight: 600;
+  text-decoration: none;
+  transition: top 0.2s var(--ease);
+}
+
+.skip-link:focus-visible {
+  top: 0;
+  outline-offset: 2px;
 }
 
 .shell {

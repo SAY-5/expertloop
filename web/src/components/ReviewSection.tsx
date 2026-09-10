@@ -203,7 +203,7 @@ export function ReviewSection() {
       <div className="shell">
         <div className="section-head">
           <div>
-            <p className="eyebrow">02 / Edit and review</p>
+            <p className="eyebrow">03 / Edit and review</p>
             <h2 id="review-title">
               Every change is a <em>diff</em>, every approval a row.
             </h2>
@@ -214,7 +214,7 @@ export function ReviewSection() {
             transition table rejects anything it does not list.
           </p>
           <span className="section-num" aria-hidden="true">
-            02
+            03
           </span>
         </div>
 

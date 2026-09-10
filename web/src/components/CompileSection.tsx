@@ -8,9 +8,6 @@ import { NotePaper } from "./NotePaper";
 
 type Range = [number, number] | null;
 
-const DRIFT_SOURCE = { kind: "doc", ref: "policy/refunds-v4" };
-const DRIFT_CONTENT = "Refunds are accepted within 14 days. Refunds above 250 require manager approval before the refund is issued.";
-
 function lineLabel(c: Citation): string {
   return c.line_start === c.line_end ? `L${c.line_start}` : `L${c.line_start}-${c.line_end}`;
 }
@@ -76,7 +73,7 @@ const entryVariants = {
 };
 
 export function CompileSection() {
-  const { world, version, bump, toast } = useWorld();
+  const { world, version } = useWorld();
   const reduced = useReducedMotion();
   const [key, setKey] = useState<NoteKey>("refund");
   const [range, setRange] = useState<Range>(null);
@@ -88,7 +85,6 @@ export function CompileSection() {
   const coverage = useMemo(() => citationCoverage(document), [document]);
   const report = useMemo(() => world.service.registry.verifyCitations(document), [document, world, version]);
   const sources = world.service.registry.list();
-  const drifted = sources.find((s) => s.kind === DRIFT_SOURCE.kind && s.ref === DRIFT_SOURCE.ref)?.content === DRIFT_CONTENT;
 
   const verify = (c: Citation): boolean => {
     if (!c.source_id) return true;
@@ -97,18 +93,6 @@ export function CompileSection() {
   };
 
   const verifiedCount = report.filter((r) => r.verified).length;
-
-  const toggleDrift = () => {
-    const original = "Refunds are accepted within 30 days. Refunds above 500 require manager approval before the refund is issued.";
-    world.service.registry.register(DRIFT_SOURCE.kind, DRIFT_SOURCE.ref, drifted ? original : DRIFT_CONTENT);
-    bump();
-    toast(
-      drifted
-        ? "policy/refunds-v4 restored: stored citation hashes match the registry again"
-        : "policy/refunds-v4 re-registered with new content: citations to it now report unverified",
-      drifted ? "ok" : "bad",
-    );
-  };
 
   return (
     <section className="section compile" id="compile" aria-labelledby="compile-title">
@@ -243,9 +227,9 @@ export function CompileSection() {
               <span className="eyebrow">source registry</span>
               <h3>Content hashes behind every source chip</h3>
             </div>
-            <button type="button" className={`btn ${drifted ? "btn-plum" : "btn-danger"}`} onClick={toggleDrift}>
-              {drifted ? "Restore policy/refunds-v4" : "Change policy/refunds-v4 upstream"}
-            </button>
+            <a className="btn btn-ghost" href="#drift">
+              Change one of these upstream
+            </a>
           </div>
           <div className="registry-scroll">
             <table className="registry-table">

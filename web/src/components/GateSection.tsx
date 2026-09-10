@@ -177,7 +177,7 @@ export function GateSection() {
       <div className="shell">
         <div className="section-head">
           <div>
-            <p className="eyebrow">03 / Test gate and delivery</p>
+            <p className="eyebrow">06 / Test gate and delivery</p>
             <h2 id="gate-title">
               Nothing ships until the <em>cases</em> say so.
             </h2>
@@ -188,7 +188,7 @@ export function GateSection() {
             a Jira issue with receipts, and a rollback re-delivers the previous snapshot.
           </p>
           <span className="section-num" aria-hidden="true">
-            03
+            06
           </span>
         </div>
 

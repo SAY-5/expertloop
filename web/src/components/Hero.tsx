@@ -32,11 +32,17 @@ function Stat({ value, suffix, label, delay }: { value: number; suffix?: string;
   const shown = useCountUp(value, 1400, delay);
   return (
     <div className="hero-stat">
-      <span className="hero-stat-value">
+      <span className="hero-stat-value" aria-hidden="true">
         {shown}
         {suffix}
       </span>
-      <span className="hero-stat-label">{label}</span>
+      <span className="hero-stat-label" aria-hidden="true">
+        {label}
+      </span>
+      {/* the ticking number is decorative; the settled figure is what gets announced */}
+      <span className="sr-only" aria-live="polite">
+        {shown === value ? `${value}${suffix ?? ""} ${label}` : ""}
+      </span>
     </div>
   );
 }
@@ -86,8 +92,12 @@ export function Hero() {
           </a>
           <div className="hero-links">
             <a href="#compile">Compile</a>
+            <a href="#drift">Drift</a>
             <a href="#review">Review</a>
+            <a href="#workload">Workload</a>
+            <a href="#versions">Versions</a>
             <a href="#gate">Gate</a>
+            <a href="#run">Run</a>
             <a href="https://github.com/SAY-5/expertloop" rel="noreferrer" target="_blank">
               Repo
             </a>
