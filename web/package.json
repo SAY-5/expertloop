@@ -6,9 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -p tsconfig.json && vite build",
+    "bundle": "npm run build",
+    "typecheck": "tsc -p tsconfig.json",
     "preview": "vite preview",
     "selfcheck": "tsx src/sim/selfcheck.ts",
-    "verify": "npm run selfcheck && npm run build"
+    "verify": "npm run selfcheck && npm run bundle"
   },
   "dependencies": {
     "framer-motion": "^12.23.12",
