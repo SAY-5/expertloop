@@ -256,3 +256,37 @@ export function summarize(world: DemoWorld): DemoSummary {
     states: sets.map((s) => ({ id: s.id, state: s.state, live: s.published_version })),
   };
 }
+
+/**
+ * The summary the repo's `make demo` prints, rendered from the in-memory records.
+ * The self-check compares this against the block quoted in the top-level README.
+ */
+export function summaryBlock(summary: DemoSummary): string {
+  const pad = (label: string) => `  ${label}:`.padEnd(25);
+  return [
+    "== Summary",
+    `${pad("notes ingested")}${summary.notes}`,
+    `${pad("steps compiled")}${summary.steps}`,
+    `${pad("citations linked")}${summary.citations} (${summary.cited_steps}/${summary.steps} steps cited, ${Math.round(summary.coverage * 100)}%)`,
+    `${pad("edits recorded")}${summary.edits}`,
+    `${pad("approvals")}${summary.approvals} (changes requested: ${summary.changes_requested})`,
+    `${pad("test runs")}${summary.test_runs} (${summary.runs_green} green, ${summary.runs_red} red; ${summary.cases_passed} cases passed, ${summary.cases_failed} failed)`,
+    `${pad("publishes blocked")}${summary.publishes_blocked}`,
+    `${pad("publishes delivered")}${summary.deliveries} deliveries (${summary.versions_delivered} versions to 2 targets), rollbacks: ${summary.rollbacks}`,
+    `${pad("receipts")}${summary.webhook_receipts} webhook (signed), ${summary.jira_comments} Jira comments, ${summary.jira_attachments} Jira attachments`,
+    `${pad("states")}${summary.states.map((s) => `set ${s.id}=${s.state} (live v${s.live})`).join(", ")}`,
+  ].join("\n");
+}
+
+/** The exact block printed by the repo's demo, quoted in README.md. */
+export const README_SUMMARY = `== Summary
+  notes ingested:        3
+  steps compiled:        18
+  citations linked:      26 (18/18 steps cited, 100%)
+  edits recorded:        3
+  approvals:             7 (changes requested: 1)
+  test runs:             5 (4 green, 1 red; 13 cases passed, 1 failed)
+  publishes blocked:     1
+  publishes delivered:   8 deliveries (4 versions to 2 targets), rollbacks: 1
+  receipts:              5 webhook (signed), 5 Jira comments, 5 Jira attachments
+  states:                set 1=published (live v2), set 2=published (live v1), set 3=published (live v2)`;

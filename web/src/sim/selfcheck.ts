@@ -4,16 +4,21 @@
  *
  * Checks: every sample note compiles with every step cited; the refund SOP fails the
  * forbidden-action test at amount 800 and is blocked from publishing; after the manager
- * approval rule it passes and publishes; the headline numbers match the README demo.
+ * approval rule it passes and publishes; a changed source flags its steps and blocks
+ * publication; branches merge and conflict; review policies hold approvals and escalate;
+ * and the demo summary reproduces the block quoted in the README character for character.
  */
 
-import { citationCoverage, compileNote } from "./compile";
-import { runDemo } from "./demo";
+import { type InstructionDocument, citationCoverage, compileNote } from "./compile";
+import { README_SUMMARY, runDemo, summaryBlock } from "./demo";
 import { PEOPLE, SAMPLE_NOTES, SAMPLE_TEST_CASES } from "./fixtures";
 import { createWorld, registerSources, ingestAll, addTestCases, reviewRound, runTests, publish, edit, applyManagerThreshold } from "./demo";
+import { HOUR_MS } from "./reviews";
+import { Conflict } from "./service";
 import { assertTransition, IllegalTransition } from "./state";
 import { verifySignature } from "./targets";
 import { sha256, hmacSha256 } from "./sha256";
+import { type Conflict as MergeConflict } from "./versioning";
 
 export interface CheckResult {
   name: string;
@@ -112,7 +117,234 @@ export function selfCheck(): CheckResult[] {
     summary.states.map((s) => `${s.id}=${s.state}(v${s.live})`).join(",") === "1=published(v2),2=published(v1),3=published(v2)",
     summary.states.map((s) => `${s.id}=${s.state}(v${s.live})`).join(","),
   );
+  check(
+    results,
+    "demo summary reproduces the README block exactly",
+    summaryBlock(summary) === README_SUMMARY,
+    summaryBlock(summary) === README_SUMMARY ? "" : summaryBlock(summary),
+  );
   check(results, "sample test case count", Object.values(SAMPLE_TEST_CASES).flat().length === 8);
+
+  // --- source drift: per-step hashes and the stale-step publish block -------
+  const driftWorld = createWorld();
+  registerSources(driftWorld);
+  ingestAll(driftWorld);
+  addTestCases(driftWorld);
+  const onboarding = driftWorld.sets.onboarding;
+  reviewRound(driftWorld, onboarding, ["ravi"]);
+  runTests(driftWorld, onboarding);
+  const weekOne = driftWorld.service.registry.find("doc", "onboarding/week-one");
+  const citedHash = () =>
+    driftWorld.service
+      .getSet(onboarding)
+      .document.steps[5].citations.find((c) => c.source_ref === "onboarding/week-one")?.source_hash;
+  check(results, "a step stores the hash of the source it cites", Boolean(weekOne && citedHash() === weekOne.content_hash));
+  const changed = weekOne
+    ? driftWorld.service.rehashSource(PEOPLE.ops, weekOne.id, "Handbook, engineering wiki, on-call primer, expense policy, laptop pickup.")
+    : false;
+  check(
+    results,
+    "re-hashing a changed source flags every step citing it",
+    changed && driftWorld.service.driftFor(onboarding).stale_steps.join(",") === "s6",
+    driftWorld.service.driftFor(onboarding).stale_steps.join(","),
+  );
+  const staleBlocked = !publish(driftWorld, onboarding);
+  check(
+    results,
+    "publish is blocked while a step cites a changed source",
+    staleBlocked && driftWorld.service.getSet(onboarding).state === "approved",
+  );
+  check(
+    results,
+    "the blocked publish names the stale step",
+    driftWorld.service
+      .auditFor(onboarding)
+      .some((a) => a.action === "publish_blocked" && String(a.detail.reason).includes("stale steps cite changed sources: s6")),
+  );
+  driftWorld.service.reverify(PEOPLE.dana, onboarding, ["s6"]);
+  check(
+    results,
+    "re-verifying closes the flag and re-stamps the citation",
+    driftWorld.service.driftFor(onboarding).open === 0 && citedHash() === weekOne?.content_hash,
+  );
+  check(
+    results,
+    "publish goes through once the drift is resolved",
+    publish(driftWorld, onboarding) && driftWorld.service.getSet(onboarding).state === "published",
+  );
+
+  const keepWorld = createWorld();
+  registerSources(keepWorld);
+  ingestAll(keepWorld);
+  const incident = keepWorld.sets.incident;
+  const runbook = keepWorld.service.registry.find("doc", "runbooks/service-triage");
+  if (runbook) keepWorld.service.rehashSource(PEOPLE.ops, runbook.id, "Scale out, roll back last deploy, fail over read replicas, page the DBA.");
+  check(results, "the incident set's runbook step is flagged", keepWorld.service.driftFor(incident).stale_steps.join(",") === "s6");
+  edit(keepWorld, incident, "record the alert id", (doc) => {
+    doc.steps[0].action += " and record the alert id";
+  });
+  check(
+    results,
+    "an edit elsewhere leaves the stale step flagged",
+    keepWorld.service.driftFor(incident).open === 1,
+    `${keepWorld.service.driftFor(incident).open} open`,
+  );
+  edit(keepWorld, incident, "restate the mitigation against the new runbook", (doc) => {
+    doc.steps[5].action += " (per the updated runbook)";
+  });
+  const afterEdit = keepWorld.service.driftFor(incident);
+  check(
+    results,
+    "editing the stale step closes its flag as edited",
+    afterEdit.open === 0 && afterEdit.resolved === 1 && afterEdit.flags[0].resolution === "edited",
+  );
+
+  // --- branches, structured diff and merge ----------------------------------
+  const branchWorld = createWorld();
+  registerSources(branchWorld);
+  ingestAll(branchWorld);
+  const parentId = branchWorld.sets.onboarding;
+  const child = branchWorld.service.branch(PEOPLE.dana, parentId, "contractor variant");
+  check(
+    results,
+    "branching copies a version into a new draft",
+    child.parent_id === parentId && child.state === "draft" && child.version === 1 && child.branched_from_version === 1,
+  );
+  const branchEdit = (setId: number, mutate: (doc: InstructionDocument) => void, reason: string) => {
+    const current = branchWorld.service.getSet(setId);
+    const document = JSON.parse(JSON.stringify(current.document)) as InstructionDocument;
+    mutate(document);
+    branchWorld.service.applyEdit(PEOPLE.dana, setId, current.version, reason, document);
+  };
+  branchEdit(child.id, (doc) => {
+    doc.steps[2].action += " and record the contractor end date";
+  }, "contractor end date");
+  branchEdit(parentId, (doc) => {
+    doc.steps[3].action += " and #eng-oncall";
+  }, "add the on-call channel");
+  const diff = branchWorld.service.diffVersions(parentId, 1, 2);
+  check(
+    results,
+    "the structured version diff names the changed step",
+    diff.summary.steps_changed === 1 && diff.steps.changed[0].id === "s4" && "action" in diff.steps.changed[0].fields,
+  );
+  const mergeOut = branchWorld.service.merge(PEOPLE.dana, child.id, "merge the contractor variant");
+  const mergedDoc = branchWorld.service.getSet(parentId).document;
+  check(
+    results,
+    "a clean merge takes the one-sided change from each side",
+    mergedDoc.steps[2].action.includes("contractor end date") &&
+      mergedDoc.steps[3].action.includes("#eng-oncall") &&
+      mergeOut.edit.to_version === 3,
+  );
+  check(
+    results,
+    "the merged branch records where it landed",
+    branchWorld.service.getSet(child.id).merged_into_version === 3 && branchWorld.service.getSet(child.id).merged_at !== null,
+  );
+
+  const clashWorld = createWorld();
+  registerSources(clashWorld);
+  ingestAll(clashWorld);
+  const clashParent = clashWorld.sets.onboarding;
+  const clashChild = clashWorld.service.branch(PEOPLE.dana, clashParent, "invite variant");
+  const clashEdit = (setId: number, text: string, reason: string) => {
+    const current = clashWorld.service.getSet(setId);
+    const document = JSON.parse(JSON.stringify(current.document)) as InstructionDocument;
+    document.steps[2].action = text;
+    clashWorld.service.applyEdit(PEOPLE.dana, setId, current.version, reason, document);
+  };
+  clashEdit(clashChild.id, "Invite the GitHub user as an outside collaborator only", "tighten the invite");
+  clashEdit(clashParent, "Invite the GitHub user to the organisation with the requested team", "clarify the invite");
+  check(results, "a preview reports the conflict before anything is written", clashWorld.service.previewMerge(clashChild.id).length === 1);
+  let conflicts: MergeConflict[] = [];
+  try {
+    clashWorld.service.merge(PEOPLE.dana, clashChild.id, "merge the invite variant");
+  } catch (error) {
+    if (error instanceof Conflict) conflicts = (error.detail.conflicts as MergeConflict[]) ?? [];
+  }
+  check(
+    results,
+    "both sides changing one field is a merge conflict",
+    conflicts.length === 1 && conflicts[0].step_id === "s3" && conflicts[0].field === "action",
+    conflicts.map((c) => `${c.step_id}.${String(c.field)}`).join(","),
+  );
+  check(
+    results,
+    "a conflicting merge leaves the parent untouched",
+    clashWorld.service.getSet(clashParent).version === 2 &&
+      clashWorld.service.auditFor(clashParent).some((a) => a.action === "merge_conflict"),
+  );
+
+  // --- review policies: required roles, self-approval, deadlines -------------
+  const policyWorld = createWorld();
+  registerSources(policyWorld);
+  ingestAll(policyWorld);
+  const policySet = policyWorld.sets.refund;
+  policyWorld.service.setReviewPolicy(PEOPLE.ops, policySet, { required_roles: ["admin"], review_deadline_hours: 4 });
+  policyWorld.service.submit(PEOPLE.dana, policySet);
+  policyWorld.service.review(PEOPLE.ravi, policySet, "approve", "verified against the source documents");
+  policyWorld.service.review(PEOPLE.mei, policySet, "approve", "verified against the source documents");
+  check(
+    results,
+    "a required reviewer role holds the approval open",
+    policyWorld.service.getSet(policySet).state === "in_review" && policyWorld.service.missingRoles(policyWorld.service.getSet(policySet)).join(",") === "admin",
+  );
+  policyWorld.service.review(PEOPLE.ops, policySet, "approve", "signed off");
+  check(results, "an approval from the required role releases it", policyWorld.service.getSet(policySet).state === "approved");
+
+  const selfSet = policyWorld.sets.incident;
+  const selfDoc = JSON.parse(JSON.stringify(policyWorld.service.getSet(selfSet).document)) as InstructionDocument;
+  selfDoc.steps[0].action += " and record the alert id";
+  policyWorld.service.applyEdit(PEOPLE.ravi, selfSet, 1, "tighten the acknowledgement", selfDoc);
+  policyWorld.service.submit(PEOPLE.dana, selfSet);
+  let selfMessage = "";
+  try {
+    policyWorld.service.review(PEOPLE.ravi, selfSet, "approve", "looks fine to me");
+  } catch (error) {
+    selfMessage = (error as Error).message;
+  }
+  check(
+    results,
+    "the author of the current version cannot approve it",
+    selfMessage.startsWith("self-approval is not allowed") && selfMessage.includes("version 2"),
+    selfMessage,
+  );
+  policyWorld.service.review(PEOPLE.mei, selfSet, "approve", "verified against the source documents");
+  check(results, "a reviewer who did not write it can still approve", policyWorld.service.getSet(selfSet).state === "approved");
+
+  const slaWorld = createWorld();
+  registerSources(slaWorld);
+  ingestAll(slaWorld);
+  const slaSet = slaWorld.sets.refund;
+  slaWorld.service.setReviewPolicy(PEOPLE.ops, slaSet, { review_deadline_hours: 4 });
+  slaWorld.service.submit(PEOPLE.dana, slaSet);
+  const submitted = slaWorld.service.getSet(slaSet);
+  check(
+    results,
+    "submitting starts the review clock from the policy",
+    submitted.submitted_at !== null && submitted.review_deadline_at === submitted.submitted_at + 4 * HOUR_MS,
+  );
+  check(results, "nothing escalates before the deadline", slaWorld.service.escalateOverdue(PEOPLE.ops).length === 0);
+  slaWorld.service.advance(5);
+  const escalated = slaWorld.service.escalateOverdue(PEOPLE.ops);
+  check(
+    results,
+    "an overdue review escalates with an audit row",
+    escalated.length === 1 && slaWorld.service.auditFor(slaSet).some((a) => a.action === "review_escalated"),
+  );
+  check(results, "an escalated review is not escalated twice", slaWorld.service.escalateOverdue(PEOPLE.ops).length === 0);
+  const queue = slaWorld.service.workload([PEOPLE.dana, PEOPLE.ravi, PEOPLE.mei]);
+  check(
+    results,
+    "the workload queue shows the overdue set and who it waits on",
+    queue.queue.length === 1 &&
+      queue.queue[0].overdue &&
+      queue.queue[0].escalated &&
+      queue.queue[0].waiting_on.join(",") === "mei,ravi",
+    queue.queue.map((q) => `${q.instruction_set_id}:${q.waiting_on.join("+")}`).join(","),
+  );
+
   return results;
 }
 
