@@ -117,6 +117,16 @@ records:
   states:                set 1=published (live v2), set 2=published (live v1), set 3=published (live v2)
 ```
 
+### Browser demo
+
+`web/` is a static site that runs the same platform in the browser: `web/src/sim/` is a pure
+TypeScript port of the packages under `expertloop/`, so the walkthrough drives the real
+compiler, drift check, state machine, executor and delivery targets rather than a mock. It
+covers citation coverage, stale sources, review policy and escalation, branch and merge
+conflicts, the publish gate and rollback, and replays the run above with the summary block
+printed here. `cd web && npm install && npm run verify` runs its 52 assertions and produces
+`dist/`; see `web/README.md`.
+
 ## API reference
 
 All endpoints take `X-API-Key`. `admin` may call everything.
@@ -215,6 +225,7 @@ alembic/       migrations
 deploy/        docker-compose stack
 samples/       three expert notes used by the demo and tests
 tests/         pytest suite (PostgreSQL via Testcontainers)
+web/           static browser demo (Vite, React, TypeScript port of the packages above)
 ```
 
 See `ARCHITECTURE.md` for the compiler, citation, state machine, gating and delivery

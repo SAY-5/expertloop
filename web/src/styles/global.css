@@ -474,3 +474,10 @@ pre,
     transition-duration: 0.001ms !important;
   }
 }
+
+.footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  font-size: 0.9rem;
+}

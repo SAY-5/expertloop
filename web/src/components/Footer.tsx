@@ -14,13 +14,23 @@ export function Footer() {
           </span>
           <p>
             This page is a browser port of the real service: a FastAPI API over PostgreSQL with Alembic migrations,
-            a deterministic note compiler, an approval state machine, a rule-following executor and signed delivery
-            targets. The TypeScript in <code>web/src/sim</code> mirrors <code>expertloop/</code> module for module;
-            the numbers in the hero are computed by running the same demo script in memory.
+            a deterministic note compiler, source drift detection, an approval state machine with review policies,
+            step-level versioning with branches and merges, a rule-following executor and signed delivery targets.
+            The TypeScript in <code>web/src/sim</code> mirrors <code>expertloop/</code> module for module; the
+            numbers in the hero and in section 07 come from running the same demo script in memory.
           </p>
-          <p>
+          <p className="footer-links">
             <a href="https://github.com/SAY-5/expertloop" rel="noreferrer" target="_blank">
               github.com/SAY-5/expertloop
+            </a>
+            <a href="https://github.com/SAY-5/expertloop/blob/main/ARCHITECTURE.md" rel="noreferrer" target="_blank">
+              ARCHITECTURE.md
+            </a>
+            <a href="https://github.com/SAY-5/expertloop/blob/main/web/README.md" rel="noreferrer" target="_blank">
+              web/README.md
+            </a>
+            <a href="https://github.com/SAY-5/expertloop/blob/main/CONTRIBUTING.md" rel="noreferrer" target="_blank">
+              CONTRIBUTING.md
             </a>
           </p>
         </div>
