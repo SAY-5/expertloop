@@ -117,6 +117,11 @@ records:
   states:                set 1=published (live v2), set 2=published (live v1), set 3=published (live v2)
 ```
 
+The instruction set ids come from the database, so those are the ids a fresh stack prints;
+running `make demo` again without `make down` in between continues the sequence.
+`make demo-check` runs the same script in process against an empty schema and asserts this
+block line for line.
+
 ### Browser demo
 
 `web/` is a static site that runs part of the platform in the browser. `web/src/sim/` is a
