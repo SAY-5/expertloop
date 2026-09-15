@@ -58,12 +58,52 @@ def check_fixture(name: str, produced: Any) -> None:
         ),
         min(len(produced_lines), len(stored_lines)),
     )
+    committed = stored_lines[first] if first < len(stored_lines) else "<end of file>"
+    produced_line = produced_lines[first] if first < len(produced_lines) else "<end of file>"
     pytest.fail(
         f"samples/expected/{name} is out of date at line {first + 1}:\n"
-        f"  committed: {stored_lines[first] if first < len(stored_lines) else '<end of file>'}\n"
-        f"  produced:  {produced_lines[first] if first < len(produced_lines) else '<end of file>'}\n"
+        f"  committed: {committed}\n"
+        f"  produced:  {produced_line}\n"
         "Refresh with EXPERTLOOP_WRITE_GOLDEN=1 if the change was deliberate."
     )
+
+
+PHRASINGS_NOTE = """# Warehouse dispatch phrasings
+
+## Before you start
+- The order is paid and the pick list is printed.
+
+## Tools
+- OrderDB
+- ShipStation
+
+## Steps
+1. Wait for the warehouse scan and do not proceed until it is present.
+2. Confirm the packing slip and must not proceed before the scan lands.
+3. Answer the customer ticket and do not escalate to the risk team.
+4. Issue the refund unless the order is flagged.
+5. If the scan is present, ship the parcel, otherwise hold it.
+6. Book the courier in ShipStation, expected: tracking number recorded in OrderDB.
+   If the courier is unavailable, hand off to the dispatch desk.
+
+## Never
+- Never dispatch without a printed label.
+
+## Done when
+- The parcel is scanned out and the tracking number is in OrderDB.
+"""
+
+
+def test_compiled_phrasings_match_the_committed_fixture():
+    """The phrasings R4 was about, pinned for the browser port as well as for Python."""
+    document = compile_note(PHRASINGS_NOTE, note_id=NOTE_ID, name="Warehouse dispatch phrasings")
+    check_fixture("compiled_phrasings.json", {"note": PHRASINGS_NOTE, "document": document})
+    steps = document["steps"]
+    assert len(steps) == 6
+    assert steps[0]["action"] == "Wait for the warehouse scan"
+    assert steps[0]["expected_outcome"] == "it is present"
+    assert [step["halts"] for step in steps] == [False] * 6
+    assert not any("proceed" in entry["text"] for entry in document["forbidden_actions"])
 
 
 def test_golden_notes_are_the_notes_the_demo_ingests():

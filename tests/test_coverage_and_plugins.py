@@ -183,3 +183,21 @@ def test_ops_overview_aggregates_state_coverage_drift_and_publishes(client):
         "compare",
     ]
     assert get_set(client, published)["state"] == "published"
+
+
+def test_a_bare_english_in_is_not_a_membership_operator():
+    # "logged in user is admin" used to parse as membership in the list "user is admin" and
+    # answer False; the membership operator now has to be spelled out
+    assert registry.evaluate("logged in user is admin", {"facts": {"logged_in_user": "admin"}}) == (
+        True,
+        "compare",
+    )
+    assert registry.evaluate("logged in user is admin", {"facts": {"logged_in_user": "guest"}}) == (
+        False,
+        "compare",
+    )
+    assert evaluate_condition("region is in eu, uk", {"facts": {"region": "eu"}})
+    assert registry.evaluate("role is one of admin, owner", {"facts": {"role": "owner"}}) == (
+        True,
+        "membership",
+    )

@@ -45,8 +45,7 @@ every stored step carries provenance that can be resolved rather than a list tha
 non-empty. An edit that cites a source the registry does not hold is refused with 422 unless
 it passes `register_unknown_sources`, which keeps automatic registration at ingest, where the
 note itself is the evidence. The compiler is deterministic; there is no model call in the
-default path. A rewriting model
-can be layered on top as an optional edit author, but it never bypasses validation.
+default path.
 
 `expertloop/sources/registry.py` stores each referenced source with a SHA-256 of its
 content (or of the reference itself when no content was supplied). `resolve_citations`
@@ -101,6 +100,10 @@ draft ──submit──> in_review ──approve──> approved ──publish�
   │                  v  │                    v                     v
   └───────── changes_requested             draft                 draft
 ```
+
+Every service function that writes state loads the instruction set with `FOR UPDATE`, so two
+approvals, two publishes, or an edit racing a merge are serialised by PostgreSQL instead of
+each deciding from a snapshot that does not include the other's uncommitted work.
 
 `expertloop/workflow/state.py` holds the transition table; `assert_transition` raises
 `IllegalTransition` (HTTP 409) for anything else. Reviews are recorded per version and per
@@ -159,7 +162,19 @@ one `publications` row per target with the receipt returned by the system:
 
 * `WebhookTarget` posts canonical JSON with `X-ExpertLoop-Timestamp` and an HMAC-SHA256
   `X-ExpertLoop-Signature` over `<timestamp>.<body>`
-* `JiraTarget` adds a comment containing the agent prompt and attaches the document as JSON
+* `JiraTarget` adds a comment containing the agent prompt and attaches the document as JSON.
+  Jira Cloud's REST v3 comment endpoint takes an Atlassian Document Format body rather than a
+  plain string, so the prompt goes in a minimal ADF document: a paragraph naming the set and a
+  code block holding the prompt. The fake rejects a non-ADF body on that path with 400
+
+Both targets receive a `delivery_id` of `<set>:<version>:<action>`, in the payload and in an
+`X-ExpertLoop-Delivery` header. It is deliberately stable across retries so that a receiver
+can recognise a re-posted delivery, and a target that already holds a `delivered` publication
+for that set, version and action is skipped rather than posted to twice. A failed rollback
+writes a `rollback_failed` audit row and counts as a failed publish.
+
+Delivery has been exercised against the fake business systems, which check the shape of each
+request, and not against a Jira tenant or a production webhook receiver.
 
 If any target fails, the failure is recorded, the set stays `approved`, and the call
 returns 409 listing the failed targets. On success the set becomes `published` and

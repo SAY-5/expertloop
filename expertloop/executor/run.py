@@ -13,6 +13,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
+from expertloop.compiler.compile import halts_from
+
 COMPARE_RE = re.compile(
     r"^(?P<field>[a-z_][a-z0-9_ ]*?)\s*"
     r"(?P<op>>=|<=|==|!=|>|<|\bis more than\b|\bis greater than\b|\bis at least\b"
@@ -22,7 +24,6 @@ COMPARE_RE = re.compile(
     re.IGNORECASE,
 )
 NUMBER_RE = re.compile(r"^[$€£]?\s*(-?\d[\d,]*(?:\.\d+)?)\b")
-STOP_WORDS = ("stop", "halt", "escalate", "do not proceed", "hand off", "hand it off", "pause")
 
 
 @dataclass
@@ -129,7 +130,7 @@ def _apply_rules(
             trace.rules_fired.append(f"{label}: if {condition} then {then}")
             trace.rules_fired_ids.append(f"{label}:{index}")
             trace.actions.append(then)
-            if rule.get("halts") or any(w in then.lower() for w in STOP_WORDS):
+            if rule.get("halts") or halts_from(then):
                 trace.halted_at = label
                 return True
     return False

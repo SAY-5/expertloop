@@ -35,7 +35,7 @@ below reads those files and compares them with what the port produces.
 ```
 npm install
 npm run dev        # vite dev server
-npm run selfcheck  # 56 assertions over the ported simulation, exits non-zero on failure
+npm run selfcheck  # 57 assertions over the ported simulation, exits non-zero on failure
 npm run bundle     # typecheck and produce dist/ (alias of npm run build)
 npm run verify     # selfcheck followed by the bundle
 ```

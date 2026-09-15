@@ -20,6 +20,31 @@ RULE_RE = re.compile(r"^\s*(?:if|when)\s+(.+?)\s*(?:,|then)\s*(.+)$", re.IGNOREC
 FORBIDDEN_RE = re.compile(r"\b(?:never|do not|don't|must not)\s+(.+)", re.IGNORECASE)
 OUTCOME_RE = re.compile(r"\b(?:so that|until|expected:|result:)\s*(.+)$", re.IGNORECASE)
 STOP_WORDS = ("stop", "halt", "escalate", "do not proceed", "hand off", "hand it off", "pause")
+# "do not proceed until the scan lands" gates the step on an outcome; experts write it as a
+# negation, but it is not a forbidden action and it does not stop the run
+NOT_PROCEED_RE = re.compile(
+    r"\b(?:do not|don't|does not|must not)\s+proceed\s+(?:until|before)"
+    r"\s+(?P<outcome>.+?)(?=[.;]|$)",
+    re.IGNORECASE,
+)
+NEGATED_RE = re.compile(r"\b(?:do not|don't|does not|must not|never|without)\s+$", re.IGNORECASE)
+TRAILING_CONJUNCTION_RE = re.compile(r"\s+(?:and|but|then)$", re.IGNORECASE)
+
+
+def halts_from(text: str) -> bool:
+    """True when the text tells the agent to stop.
+
+    A stop word inside a negation ("do not escalate") is an instruction not to stop, and a
+    guard ("do not proceed until X") is a condition on the step, so neither counts.
+    """
+    lowered = NOT_PROCEED_RE.sub(" ", text.lower())
+    for word in STOP_WORDS:
+        start = 0
+        while (found := lowered.find(word, start)) != -1:
+            if not NEGATED_RE.search(lowered[:found]):
+                return True
+            start = found + len(word)
+    return False
 
 
 def _citation(item: NoteItem, note_id: int | None, ref: SourceRef | None = None) -> dict[str, Any]:
@@ -78,9 +103,19 @@ def _split_rules(
                 {
                     "condition": rule.group(1).strip(),
                     "then": then,
-                    "halts": any(word in then.lower() for word in STOP_WORDS),
+                    "halts": halts_from(then),
                 }
             )
+            continue
+        guard = NOT_PROCEED_RE.search(line)
+        if guard:
+            if outcome is None:
+                outcome = guard.group("outcome").strip().rstrip(".")
+            head = TRAILING_CONJUNCTION_RE.sub(
+                "", line[: guard.start()].strip().rstrip(",")
+            ).strip()
+            if head:
+                action_lines.append(head)
             continue
         banned = FORBIDDEN_RE.search(line)
         if banned:
@@ -123,7 +158,7 @@ def compile_parsed(parsed: ParsedNote, note_id: int | None, name: str) -> dict[s
                 {
                     "condition": rule.group(1).strip(),
                     "then": then,
-                    "halts": any(word in then.lower() for word in STOP_WORDS),
+                    "halts": halts_from(then),
                     "citations": _citations(item, note_id),
                 }
             )
@@ -153,7 +188,7 @@ def compile_parsed(parsed: ParsedNote, note_id: int | None, name: str) -> dict[s
             "order": index,
             "action": action.rstrip("."),
             "condition": condition,
-            "halts": any(word in action.lower() for word in STOP_WORDS),
+            "halts": halts_from(action),
             "tool": _detect_tool(item.text, tools),
             "decision_rules": rules,
             "forbidden": banned,

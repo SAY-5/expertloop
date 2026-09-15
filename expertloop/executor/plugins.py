@@ -12,8 +12,14 @@ from __future__ import annotations
 import re
 from typing import Any, Protocol, runtime_checkable
 
+# "is one of a, b" / "is in a, b" and the bracketed "in (a, b)". A bare English "in" is
+# deliberately not a membership operator: "logged in user is admin" is a comparison.
 MEMBER_RE = re.compile(
-    r"^(?P<field>[a-z_][a-z0-9_ ]*?)\s+(?:is one of|is in|in)\s*[\(\[]?(?P<values>.+?)[\)\]]?$",
+    r"^(?P<field>[a-z_][a-z0-9_ ]*?)\s+is\s+(?:one of|in)\s+(?P<values>.+?)$",
+    re.IGNORECASE,
+)
+MEMBER_IN_LIST_RE = re.compile(
+    r"^(?P<field>[a-z_][a-z0-9_ ]*?)\s+in\s*[\(\[](?P<values>.+?)[\)\]]$",
     re.IGNORECASE,
 )
 
@@ -36,14 +42,18 @@ class FlagPlugin:
 
 
 class MembershipPlugin:
-    """``role is one of admin, owner`` or ``region in (eu, uk)`` against ``facts``."""
+    """``role is one of admin, owner``, ``region is in eu, uk`` or ``region in (eu, uk)``.
+
+    The operator has to be spelled out. A condition that merely contains the English word
+    "in", such as ``logged in user is admin``, is left to the comparison grammar.
+    """
 
     name = "membership"
 
     def evaluate(self, condition: str, scenario: dict[str, Any]) -> bool | None:
         from expertloop.executor.run import _coerce, _lookup
 
-        match = MEMBER_RE.match(condition)
+        match = MEMBER_RE.match(condition) or MEMBER_IN_LIST_RE.match(condition)
         if not match:
             return None
         found, actual = _lookup(scenario.get("facts", {}), match.group("field"))

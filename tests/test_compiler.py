@@ -1,5 +1,6 @@
 from expertloop.compiler import compile_note, parse_note
 from expertloop.compiler.compile import citation_coverage, validate_document
+from expertloop.executor import execute
 from tests.conftest import sample
 
 
@@ -64,3 +65,65 @@ def test_validate_document_rejects_uncited_steps():
     doc = compile_note("# X\n1. do a thing\n")
     doc["steps"][0]["citations"] = []
     assert validate_document(doc) == ["step s1 has no citations"]
+
+
+def test_do_not_proceed_until_is_a_guard_not_a_forbidden_action():
+    doc = compile_note(
+        "# W\n\n## Steps\n"
+        "1. Wait for the warehouse scan and do not proceed until it is present.\n"
+        "2. Ship the parcel.\n",
+        note_id=1,
+    )
+    step = doc["steps"][0]
+    assert step["action"] == "Wait for the warehouse scan"
+    assert step["expected_outcome"] == "it is present"
+    assert step["halts"] is False and step["forbidden"] == []
+    assert doc["forbidden_actions"] == []
+    trace = execute(doc, {"facts": {}})
+    assert trace.steps_executed == ["s1", "s2"] and trace.halted_at is None
+
+
+def test_must_not_proceed_before_is_the_same_guard():
+    doc = compile_note(
+        "# W\n\n## Steps\n"
+        "1. Confirm the packing slip and must not proceed before the scan lands.\n",
+        note_id=1,
+    )
+    step = doc["steps"][0]
+    assert step["action"] == "Confirm the packing slip"
+    assert step["expected_outcome"] == "the scan lands"
+    assert doc["forbidden_actions"] == []
+
+
+def test_negated_stop_word_does_not_halt_the_step():
+    doc = compile_note(
+        "# N\n\n## Steps\n1. Answer the ticket and do not escalate to the risk team.\n",
+        note_id=1,
+    )
+    step = doc["steps"][0]
+    assert step["halts"] is False
+    assert step["forbidden"] == ["escalate to the risk team"]
+    assert execute(doc, {"facts": {}}).halted_at is None
+
+
+def test_unless_clause_stays_in_the_action():
+    doc = compile_note(
+        "# U\n\n## Steps\n1. Issue the refund unless the order is flagged.\n", note_id=1
+    )
+    step = doc["steps"][0]
+    assert step["action"] == "Issue the refund unless the order is flagged"
+    assert step["condition"] is None and step["forbidden"] == []
+
+
+def test_otherwise_clause_is_not_compiled_into_a_second_branch():
+    """A limitation the README states: the else branch stays in the conditional step."""
+    doc = compile_note(
+        "# O\n\n## Steps\n"
+        "1. If the scan is present, ship the parcel, otherwise hold it.\n"
+        "2. Log the outcome.\n",
+        note_id=1,
+    )
+    step = doc["steps"][0]
+    assert step["condition"] == "the scan is present"
+    assert step["action"] == "ship the parcel, otherwise hold it"
+    assert execute(doc, {"facts": {}}).skipped == ["s1"]

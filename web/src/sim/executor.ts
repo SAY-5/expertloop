@@ -6,7 +6,7 @@
  * call it would take, and stops when a rule says so. Test cases assert on that trace.
  */
 
-import { type DecisionRule, type InstructionDocument, STOP_WORDS } from "./compile";
+import { type DecisionRule, type InstructionDocument, haltsFrom } from "./compile";
 
 export interface Scenario {
   facts?: Record<string, unknown>;
@@ -71,11 +71,6 @@ function lookup(facts: Record<string, unknown>, name: string): [boolean, unknown
   return [false, null];
 }
 
-function hasStopWord(text: string): boolean {
-  const lowered = text.toLowerCase();
-  return STOP_WORDS.some((w) => lowered.includes(w));
-}
-
 /**
  * Evaluate a natural-language condition against the scenario. Structured facts live in
  * scenario.facts; free-form flags in scenario.flags match a condition by exact text.
@@ -119,7 +114,7 @@ function applyRules(rules: DecisionRule[], scenario: Scenario, trace: ExecutionT
       trace.rules_fired.push(`${label}: if ${rule.condition} then ${rule.then}`);
       trace.rules_fired_ids.push(`${label}:${index}`);
       trace.actions.push(rule.then);
-      if (rule.halts || hasStopWord(rule.then)) {
+      if (rule.halts || haltsFrom(rule.then)) {
         trace.halted_at = label;
         return true;
       }

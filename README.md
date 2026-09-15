@@ -85,8 +85,8 @@ The API listens on `http://localhost:8090`, the fake webhook and Jira on
 
 ## Demo
 
-`make demo` registers eight sources, ingests three real expert notes from `samples/`
-(a refund-handling SOP, an onboarding checklist, an incident triage note), shows the
+`make demo` registers eight sources, ingests three sample notes written for the demo from
+`samples/` (a refund SOP, an onboarding checklist, an incident triage note), shows the
 citations, routes an edit through review, runs test cases, blocks one set on a
 forbidden-action test, fixes and re-reviews it, publishes to the fake webhook and Jira
 targets, and rolls one set back. The summary it prints is computed from the API's own
@@ -128,7 +128,7 @@ the publish gate and rollback, and replays the run above with the summary block 
 here. The port is pinned to this repository by fixtures: `tests/test_golden.py` writes what
 the Python compiler and executor produce into `samples/expected/`, and the browser
 self-check reads those files and has to reproduce them. `cd web && npm ci && npm run verify`
-runs its 56 assertions and produces `dist/`; see `web/README.md`.
+runs its 57 assertions and produces `dist/`; see `web/README.md`.
 
 ## API reference
 
@@ -180,8 +180,9 @@ Test case expectations: `required_actions`, `forbidden_actions`, `expected_outco
 (free-text conditions that are simply true). Conditions are evaluated by the plugin
 registry in `expertloop/executor/plugins.py`: a plugin returns True or False when it
 understands a condition and None to pass; `flags`, `membership` (`role is one of admin,
-owner`) and `compare` ship built in, and `registry.register(plugin, first=True)` puts a
-custom grammar ahead of them.
+owner`, `region is in eu, uk` or `region in (eu, uk)`; a bare English `in` is not a
+membership operator, so `logged in user is admin` is a comparison) and `compare` ship built
+in, and `registry.register(plugin, first=True)` puts a custom grammar ahead of them.
 
 ## Data model
 
@@ -235,6 +236,22 @@ web/           static browser demo (Vite, React; ports the compile, drift, revie
 
 See `ARCHITECTURE.md` for the compiler, citation, state machine, gating and delivery
 design, and `CONTRIBUTING.md` for the development workflow.
+
+## Limitations
+
+* The compiler is a fixed set of rules, not a parser for English. It has been exercised on
+  the three sample notes, the golden fixtures in `samples/expected/` and the compiler unit
+  tests. It handles `if X then Y` and `if X, Y` rules, `never` / `do not` / `must not`
+  clauses, `so that` / `until` / `expected:` outcomes, and reads `do not proceed until X` as
+  a guard on the step rather than a forbidden action. An `otherwise` clause is left in the
+  step's action: `If X, do it, otherwise hold` compiles to one conditional step, so when X
+  is false the executor skips the step and the else branch with it.
+* Delivery adapters have been exercised against the fake business systems in
+  `expertloop/fakes/server.py`, which check the shape of each request, and not against a
+  Jira tenant or a production webhook receiver.
+* The executor is a rule follower, not a model: it decides conditions with the plugin
+  registry and has no notion of a step it does not understand.
+* The browser demo ports part of the platform; `web/README.md` lists what is not ported.
 
 ## Releases
 

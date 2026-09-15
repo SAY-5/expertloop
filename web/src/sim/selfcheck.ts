@@ -22,6 +22,7 @@ import { type Conflict as MergeConflict } from "./versioning";
 import { runTestCase } from "./executor";
 import compiledIncident from "../../../samples/expected/compiled_incident.json";
 import compiledOnboarding from "../../../samples/expected/compiled_onboarding.json";
+import compiledPhrasings from "../../../samples/expected/compiled_phrasings.json";
 import compiledRefund from "../../../samples/expected/compiled_refund.json";
 import goldenTraces from "../../../samples/expected/traces.json";
 
@@ -96,6 +97,17 @@ export function selfCheck(): CheckResult[] {
       "samples/expected/compiled_" + note.key + ".json",
     );
   }
+  const phrasings = compiledPhrasings as { note: string; document: unknown };
+  check(
+    results,
+    "guards, negated stop words and unless compile the way the Python compiler reads them",
+    sameAsFixture(
+      compileNote(phrasings.note, 1, "Warehouse dispatch phrasings"),
+      phrasings.document,
+    ),
+    "samples/expected/compiled_phrasings.json",
+  );
+
   const traceFixtures = goldenTraces as Record<string, { name: string }[]>;
   const traceMismatches: string[] = [];
   for (const note of SAMPLE_NOTES) {
