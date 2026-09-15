@@ -1,0 +1,178 @@
+{
+  "document": {
+    "agent_prompt": "# Warehouse dispatch phrasings\n\nBefore starting, confirm:\n- The order is paid and the pick list is printed\n\nFollow these steps in order:\n1. Wait for the warehouse scan\n   - expected: it is present\n2. Confirm the packing slip\n   - expected: the scan lands\n3. Answer the customer ticket and do not escalate to the risk team\n4. Issue the refund unless the order is flagged\n5. Only if the scan is present: ship the parcel, otherwise hold it\n6. Book the courier in ShipStation (tool: OrderDB)\n   - if the courier is unavailable: hand off to the dispatch desk\n   - expected: tracking number recorded in OrderDB\n\nNever:\n- dispatch without a printed label\n- escalate to the risk team\n\nDone when:\n- The parcel is scanned out and the tracking number is in OrderDB",
+    "decision_rules": [],
+    "forbidden_actions": [
+      {
+        "citations": [
+          {
+            "line_end": 20,
+            "line_start": 20,
+            "note_id": 1
+          }
+        ],
+        "text": "dispatch without a printed label"
+      },
+      {
+        "citations": [
+          {
+            "line_end": 13,
+            "line_start": 13,
+            "note_id": 1
+          }
+        ],
+        "text": "escalate to the risk team"
+      }
+    ],
+    "name": "Warehouse dispatch phrasings",
+    "outcomes": [
+      {
+        "citations": [
+          {
+            "line_end": 23,
+            "line_start": 23,
+            "note_id": 1
+          }
+        ],
+        "text": "The parcel is scanned out and the tracking number is in OrderDB"
+      }
+    ],
+    "preconditions": [
+      {
+        "citations": [
+          {
+            "line_end": 4,
+            "line_start": 4,
+            "note_id": 1
+          }
+        ],
+        "text": "The order is paid and the pick list is printed"
+      }
+    ],
+    "sources": [],
+    "steps": [
+      {
+        "action": "Wait for the warehouse scan",
+        "citations": [
+          {
+            "line_end": 11,
+            "line_start": 11,
+            "note_id": 1
+          }
+        ],
+        "condition": null,
+        "decision_rules": [],
+        "expected_outcome": "it is present",
+        "forbidden": [],
+        "halts": false,
+        "id": "s1",
+        "order": 1,
+        "tool": null
+      },
+      {
+        "action": "Confirm the packing slip",
+        "citations": [
+          {
+            "line_end": 12,
+            "line_start": 12,
+            "note_id": 1
+          }
+        ],
+        "condition": null,
+        "decision_rules": [],
+        "expected_outcome": "the scan lands",
+        "forbidden": [],
+        "halts": false,
+        "id": "s2",
+        "order": 2,
+        "tool": null
+      },
+      {
+        "action": "Answer the customer ticket and do not escalate to the risk team",
+        "citations": [
+          {
+            "line_end": 13,
+            "line_start": 13,
+            "note_id": 1
+          }
+        ],
+        "condition": null,
+        "decision_rules": [],
+        "expected_outcome": null,
+        "forbidden": [
+          "escalate to the risk team"
+        ],
+        "halts": false,
+        "id": "s3",
+        "order": 3,
+        "tool": null
+      },
+      {
+        "action": "Issue the refund unless the order is flagged",
+        "citations": [
+          {
+            "line_end": 14,
+            "line_start": 14,
+            "note_id": 1
+          }
+        ],
+        "condition": null,
+        "decision_rules": [],
+        "expected_outcome": null,
+        "forbidden": [],
+        "halts": false,
+        "id": "s4",
+        "order": 4,
+        "tool": null
+      },
+      {
+        "action": "ship the parcel, otherwise hold it",
+        "citations": [
+          {
+            "line_end": 15,
+            "line_start": 15,
+            "note_id": 1
+          }
+        ],
+        "condition": "the scan is present",
+        "decision_rules": [],
+        "expected_outcome": null,
+        "forbidden": [],
+        "halts": false,
+        "id": "s5",
+        "order": 5,
+        "tool": null
+      },
+      {
+        "action": "Book the courier in ShipStation",
+        "citations": [
+          {
+            "line_end": 17,
+            "line_start": 16,
+            "note_id": 1
+          }
+        ],
+        "condition": null,
+        "decision_rules": [
+          {
+            "condition": "the courier is unavailable",
+            "halts": true,
+            "then": "hand off to the dispatch desk"
+          }
+        ],
+        "expected_outcome": "tracking number recorded in OrderDB",
+        "forbidden": [],
+        "halts": false,
+        "id": "s6",
+        "order": 6,
+        "tool": "OrderDB"
+      }
+    ],
+    "title": "Warehouse dispatch phrasings",
+    "tools": [
+      "OrderDB",
+      "ShipStation"
+    ]
+  },
+  "note": "# Warehouse dispatch phrasings\n\n## Before you start\n- The order is paid and the pick list is printed.\n\n## Tools\n- OrderDB\n- ShipStation\n\n## Steps\n1. Wait for the warehouse scan and do not proceed until it is present.\n2. Confirm the packing slip and must not proceed before the scan lands.\n3. Answer the customer ticket and do not escalate to the risk team.\n4. Issue the refund unless the order is flagged.\n5. If the scan is present, ship the parcel, otherwise hold it.\n6. Book the courier in ShipStation, expected: tracking number recorded in OrderDB.\n   If the courier is unavailable, hand off to the dispatch desk.\n\n## Never\n- Never dispatch without a printed label.\n\n## Done when\n- The parcel is scanned out and the tracking number is in OrderDB.\n"
+}

@@ -1,0 +1,3 @@
+{
+  "summary_block": "== Summary\n  notes ingested:        3\n  steps compiled:        18\n  citations linked:      26 (18/18 steps cited, 100%)\n  edits recorded:        3\n  approvals:             7 (changes requested: 1)\n  test runs:             5 (4 green, 1 red; 13 cases passed, 1 failed)\n  publishes blocked:     1\n  publishes delivered:   8 deliveries (4 versions to 2 targets), rollbacks: 1\n  receipts:              5 webhook (signed), 5 Jira comments, 5 Jira attachments\n  states:                set 1=published (live v2), set 2=published (live v1), set 3=published (live v2)"
+}

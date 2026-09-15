@@ -1,0 +1,232 @@
+{
+  "agent_prompt": "# New engineer onboarding checklist\n\nBefore starting, confirm:\n- HR has marked the hire as started in Workday\n- Manager has filled the access request form at https://intranet.example.com/forms/access-request\n\nFollow these steps in order:\n1. Create the Okta account using the corporate email from Workday (tool: Okta)\n2. Add the account to the engineering group in Okta (tool: Okta)\n   - expected: GitHub and Jira SSO work\n3. Invite the GitHub user to the organisation with the team listed in the access request form (tool: GitHub)\n   - if the role is contractor: invite as an outside collaborator on the named repositories only\n4. Add the person to the #eng-announcements and team channels in Slack (tool: Slack)\n5. Create the onboarding epic in Jira from template ONB-100 and assign it to the new hire (tool: Jira)\n6. Send the welcome message in Slack with the links from doc:onboarding/week-one (tool: Slack)\n\nDecision rules:\n- if the start date is more than 7 days away: stop and schedule the checklist for the start date\n\nNever:\n- grant admin roles during onboarding\n- share credentials over Slack\n\nDone when:\n- The new hire can open GitHub, Jira and Slack through Okta",
+  "decision_rules": [
+    {
+      "citations": [
+        {
+          "line_end": 23,
+          "line_start": 23,
+          "note_id": 1
+        }
+      ],
+      "condition": "the start date is more than 7 days away",
+      "halts": true,
+      "then": "stop and schedule the checklist for the start date"
+    }
+  ],
+  "forbidden_actions": [
+    {
+      "citations": [
+        {
+          "line_end": 26,
+          "line_start": 26,
+          "note_id": 1
+        }
+      ],
+      "text": "grant admin roles during onboarding"
+    },
+    {
+      "citations": [
+        {
+          "line_end": 27,
+          "line_start": 27,
+          "note_id": 1
+        }
+      ],
+      "text": "share credentials over Slack"
+    }
+  ],
+  "name": "New engineer onboarding checklist",
+  "outcomes": [
+    {
+      "citations": [
+        {
+          "line_end": 30,
+          "line_start": 30,
+          "note_id": 1
+        }
+      ],
+      "text": "The new hire can open GitHub, Jira and Slack through Okta"
+    }
+  ],
+  "preconditions": [
+    {
+      "citations": [
+        {
+          "line_end": 4,
+          "line_start": 4,
+          "note_id": 1
+        }
+      ],
+      "text": "HR has marked the hire as started in Workday"
+    },
+    {
+      "citations": [
+        {
+          "line_end": 5,
+          "line_start": 5,
+          "note_id": 1
+        },
+        {
+          "line_end": 5,
+          "line_start": 5,
+          "note_id": 1,
+          "source_kind": "url",
+          "source_ref": "https://intranet.example.com/forms/access-request"
+        }
+      ],
+      "text": "Manager has filled the access request form at https://intranet.example.com/forms/access-request"
+    }
+  ],
+  "sources": [
+    {
+      "kind": "url",
+      "ref": "https://intranet.example.com/forms/access-request"
+    },
+    {
+      "kind": "ticket",
+      "ref": "ONB-100"
+    },
+    {
+      "kind": "doc",
+      "ref": "onboarding/week-one"
+    }
+  ],
+  "steps": [
+    {
+      "action": "Create the Okta account using the corporate email from Workday",
+      "citations": [
+        {
+          "line_end": 14,
+          "line_start": 14,
+          "note_id": 1
+        }
+      ],
+      "condition": null,
+      "decision_rules": [],
+      "expected_outcome": null,
+      "forbidden": [],
+      "halts": false,
+      "id": "s1",
+      "order": 1,
+      "tool": "Okta"
+    },
+    {
+      "action": "Add the account to the engineering group in Okta",
+      "citations": [
+        {
+          "line_end": 15,
+          "line_start": 15,
+          "note_id": 1
+        }
+      ],
+      "condition": null,
+      "decision_rules": [],
+      "expected_outcome": "GitHub and Jira SSO work",
+      "forbidden": [],
+      "halts": false,
+      "id": "s2",
+      "order": 2,
+      "tool": "Okta"
+    },
+    {
+      "action": "Invite the GitHub user to the organisation with the team listed in the access request form",
+      "citations": [
+        {
+          "line_end": 17,
+          "line_start": 16,
+          "note_id": 1
+        }
+      ],
+      "condition": null,
+      "decision_rules": [
+        {
+          "condition": "the role is contractor",
+          "halts": false,
+          "then": "invite as an outside collaborator on the named repositories only"
+        }
+      ],
+      "expected_outcome": null,
+      "forbidden": [],
+      "halts": false,
+      "id": "s3",
+      "order": 3,
+      "tool": "GitHub"
+    },
+    {
+      "action": "Add the person to the #eng-announcements and team channels in Slack",
+      "citations": [
+        {
+          "line_end": 18,
+          "line_start": 18,
+          "note_id": 1
+        }
+      ],
+      "condition": null,
+      "decision_rules": [],
+      "expected_outcome": null,
+      "forbidden": [],
+      "halts": false,
+      "id": "s4",
+      "order": 4,
+      "tool": "Slack"
+    },
+    {
+      "action": "Create the onboarding epic in Jira from template ONB-100 and assign it to the new hire",
+      "citations": [
+        {
+          "line_end": 19,
+          "line_start": 19,
+          "note_id": 1
+        },
+        {
+          "line_end": 19,
+          "line_start": 19,
+          "note_id": 1,
+          "source_kind": "ticket",
+          "source_ref": "ONB-100"
+        }
+      ],
+      "condition": null,
+      "decision_rules": [],
+      "expected_outcome": null,
+      "forbidden": [],
+      "halts": false,
+      "id": "s5",
+      "order": 5,
+      "tool": "Jira"
+    },
+    {
+      "action": "Send the welcome message in Slack with the links from doc:onboarding/week-one",
+      "citations": [
+        {
+          "line_end": 20,
+          "line_start": 20,
+          "note_id": 1
+        },
+        {
+          "line_end": 20,
+          "line_start": 20,
+          "note_id": 1,
+          "source_kind": "doc",
+          "source_ref": "onboarding/week-one"
+        }
+      ],
+      "condition": null,
+      "decision_rules": [],
+      "expected_outcome": null,
+      "forbidden": [],
+      "halts": false,
+      "id": "s6",
+      "order": 6,
+      "tool": "Slack"
+    }
+  ],
+  "title": "New engineer onboarding checklist",
+  "tools": [
+    "Okta",
+    "GitHub",
+    "Slack",
+    "Jira"
+  ]
+}

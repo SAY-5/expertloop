@@ -264,6 +264,7 @@ export function DriftSection() {
                 <button type="button" className="btn" onClick={editStale} disabled={staleCount === 0}>
                   Edit the stale step instead
                 </button>
+                <span className="chip">isolated copy of the seeded world</span>
                 <button type="button" className="btn btn-ghost" onClick={reset}>
                   Reset this panel
                 </button>

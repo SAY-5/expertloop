@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { README_SUMMARY, runDemo, summaryBlock } from "../sim/demo";
+import { README_SUMMARY, summaryBlock } from "../sim/demo";
+import { useWorld } from "../store";
 
 const TICK_MS = 110;
 
 export function RunSection() {
   const reduced = useReducedMotion();
-  const { log, summary } = useMemo(() => runDemo(), []);
+  const { demo } = useWorld();
+  const { log, summary } = demo;
   const block = useMemo(() => summaryBlock(summary), [summary]);
   const matches = block === README_SUMMARY;
   const [cursor, setCursor] = useState(reduced ? log.length : 0);
@@ -93,7 +95,7 @@ export function RunSection() {
                 <h3>demo run</h3>
               </div>
               <div className="run-controls">
-                <span className="chip chip-plum" aria-live="polite">
+                <span className="chip chip-plum" aria-live={playing ? "off" : "polite"}>
                   {shown.length}/{log.length} events
                 </span>
                 <button type="button" className="btn btn-plum" onClick={() => (done ? (setCursor(0), setPlaying(true)) : setPlaying((p) => !p))}>
@@ -104,7 +106,11 @@ export function RunSection() {
                 </button>
               </div>
             </div>
-            <ol className="run-log" ref={scroller} aria-live="polite" aria-label="demo event log">
+            {/* a log, not a live region: announcing 60 appended lines one by one is noise */}
+            <span className="sr-only" aria-live="polite">
+              {done && cursor > 0 ? `run complete, ${log.length} events` : ""}
+            </span>
+            <ol className="run-log" ref={scroller} role="log" aria-live="off" aria-label="demo event log">
               {shown.length === 0 ? <li className="feed-empty">Press play to walk the run one event at a time.</li> : null}
               <AnimatePresence initial={false}>
                 {shown.map((line, i) => (

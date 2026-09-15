@@ -14,7 +14,7 @@ from typing import Any
 
 import httpx
 
-from expertloop.targets.base import DeliveryError, DeliveryReceipt
+from expertloop.targets.base import DELIVERY_HEADER, DeliveryError, DeliveryReceipt
 
 SIGNATURE_HEADER = "X-ExpertLoop-Signature"
 TIMESTAMP_HEADER = "X-ExpertLoop-Timestamp"
@@ -48,6 +48,7 @@ class WebhookTarget:
             "Content-Type": "application/json",
             TIMESTAMP_HEADER: timestamp,
             SIGNATURE_HEADER: sign_payload(self.secret, timestamp, body),
+            DELIVERY_HEADER: str(payload.get("delivery_id", "")),
         }
         try:
             response = self.client.post(self.url, content=body, headers=headers)

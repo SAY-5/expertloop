@@ -115,6 +115,9 @@ class EditIn(BaseModel):
     expected_version: int = Field(ge=1)
     reason: str = Field(min_length=1)
     document: dict[str, Any]
+    # an edit may not invent provenance: citing a source the registry does not hold is a 422
+    # unless the editor asks for it to be registered as part of the edit
+    register_unknown_sources: bool = False
 
 
 class EditOut(BaseModel):

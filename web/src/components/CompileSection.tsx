@@ -114,13 +114,12 @@ export function CompileSection() {
           </span>
         </div>
 
-        <div className="compile-picker" role="tablist" aria-label="sample note">
+        <div className="compile-picker" role="group" aria-label="sample note">
           {SAMPLE_NOTES.map((n) => (
             <button
               key={n.key}
-              role="tab"
               type="button"
-              aria-selected={n.key === key}
+              aria-pressed={n.key === key}
               className={`picker-tab${n.key === key ? " active" : ""}`}
               onClick={() => {
                 setKey(n.key);
@@ -226,9 +225,13 @@ export function CompileSection() {
             <div>
               <span className="eyebrow">source registry</span>
               <h3>Content hashes behind every source chip</h3>
+              <p className="registry-note">
+                Section 02 rewrites a source on an isolated copy of this world, so the hashes here stay as
+                they were compiled and every citation above stays verified.
+              </p>
             </div>
             <a className="btn btn-ghost" href="#drift">
-              Change one of these upstream
+              See a rewrite in section 02
             </a>
           </div>
           <div className="registry-scroll">

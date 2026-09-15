@@ -187,7 +187,7 @@
 }
 
 .hero-step .chip {
-  font-size: 0.62rem;
+  font-size: 0.7rem;
   padding: 2px 7px;
 }
 
@@ -377,4 +377,13 @@
     gap: 10px 14px;
     font-size: 0.86rem;
   }
+}
+
+.hero-stat-note {
+  margin-top: 10px;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: var(--text-mute);
+  max-width: 48ch;
 }

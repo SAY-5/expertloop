@@ -59,14 +59,35 @@ const RULE_RE = /^\s*(?:if|when)\s+(.+?)\s*(?:,|then)\s*(.+)$/i;
 const FORBIDDEN_RE = /\b(?:never|do not|don't|must not)\s+(.+)/i;
 const OUTCOME_RE = /\b(?:so that|until|expected:|result:)\s*(.+)$/i;
 export const STOP_WORDS = ["stop", "halt", "escalate", "do not proceed", "hand off", "hand it off", "pause"];
+// "do not proceed until the scan lands" gates the step on an outcome; experts write it as a
+// negation, but it is not a forbidden action and it does not stop the run
+const NOT_PROCEED_SOURCE = String.raw`\b(?:do not|don't|does not|must not)\s+proceed\s+(?:until|before)\s+([^.;]+)`;
+const NOT_PROCEED_RE = new RegExp(NOT_PROCEED_SOURCE, "i");
+const NOT_PROCEED_ALL_RE = new RegExp(NOT_PROCEED_SOURCE, "gi");
+const NEGATED_RE = /\b(?:do not|don't|does not|must not|never|without)\s+$/i;
+const TRAILING_CONJUNCTION_RE = /\s+(?:and|but|then)$/i;
 
 function rstripDot(value: string): string {
   return value.replace(/\.+$/, "");
 }
 
-function hasStopWord(text: string): boolean {
-  const lowered = text.toLowerCase();
-  return STOP_WORDS.some((word) => lowered.includes(word));
+/**
+ * True when the text tells the agent to stop. A stop word inside a negation ("do not
+ * escalate") is an instruction not to stop, and a guard ("do not proceed until X") is a
+ * condition on the step, so neither counts. Mirrors halts_from in compiler/compile.py.
+ */
+export function haltsFrom(text: string): boolean {
+  const lowered = text.toLowerCase().replace(NOT_PROCEED_ALL_RE, " ");
+  for (const word of STOP_WORDS) {
+    let start = 0;
+    for (;;) {
+      const found = lowered.indexOf(word, start);
+      if (found === -1) break;
+      if (!NEGATED_RE.test(lowered.slice(0, found))) return true;
+      start = found + word.length;
+    }
+  }
+  return false;
 }
 
 function citation(item: NoteItem, noteId: number | null, ref?: SourceRef): Citation {
@@ -122,7 +143,19 @@ function splitRules(text: string): SplitResult {
       line = rule[2].trim();
     } else if (rule) {
       const then = rstripDot(rule[2].trim());
-      rules.push({ condition: rule[1].trim(), then, halts: hasStopWord(then) });
+      rules.push({ condition: rule[1].trim(), then, halts: haltsFrom(then) });
+      return;
+    }
+    const guard = NOT_PROCEED_RE.exec(line);
+    if (guard) {
+      if (outcome === null) outcome = rstripDot(guard[1].trim());
+      const head = line
+        .slice(0, guard.index)
+        .trim()
+        .replace(/,+$/, "")
+        .replace(TRAILING_CONJUNCTION_RE, "")
+        .trim();
+      if (head) actionLines.push(head);
       return;
     }
     const banned = FORBIDDEN_RE.exec(line);
@@ -174,7 +207,7 @@ export function compileParsed(parsed: ParsedNote, noteId: number | null, name: s
       globalRules.push({
         condition: rule[1].trim(),
         then,
-        halts: hasStopWord(then),
+        halts: haltsFrom(then),
         citations: citations(item, noteId),
       });
     } else {
@@ -202,7 +235,7 @@ export function compileParsed(parsed: ParsedNote, noteId: number | null, name: s
       order: index,
       action: rstripDot(action),
       condition,
-      halts: hasStopWord(action),
+      halts: haltsFrom(action),
       tool: detectTool(item.text, tools),
       decision_rules: rules,
       forbidden,

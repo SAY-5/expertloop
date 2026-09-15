@@ -302,6 +302,7 @@ export function VersionSection() {
                 <button type="button" className="btn btn-plum" onClick={merge} disabled={!branch || branch.merged_at !== null}>
                   Merge the branch
                 </button>
+                <span className="chip">isolated copy of the seeded world</span>
                 <button type="button" className="btn btn-ghost" onClick={reset}>
                   Reset this panel
                 </button>

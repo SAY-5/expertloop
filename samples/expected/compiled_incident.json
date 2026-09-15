@@ -1,0 +1,231 @@
+{
+  "agent_prompt": "# Incident triage for production alerts\n\nBefore starting, confirm:\n- The alert came from the production PagerDuty service, see https://status.example.com/runbooks/triage\n- You are the on-call engineer listed in PagerDuty\n\nFollow these steps in order:\n1. Acknowledge the alert in PagerDuty within 5 minutes (tool: PagerDuty)\n2. Open the service dashboard in Grafana and check error rate and latency for the last 30 minutes (tool: Grafana)\n3. Only if error rate exceeds 5 percent: declare a SEV1 in Slack and page the service owner (tool: Slack)\n4. Only if error rate is under 5 percent: post a status update in the #incidents Slack channel (tool: Slack)\n5. Create the incident ticket in Jira from template INC-77 with the alert link and the dashboard screenshot (tool: Jira)\n6. Mitigate using the runbook in doc:runbooks/service-triage\n   - expected: error rate back under 1 percent\n7. Resolve the PagerDuty alert and link the Jira ticket in the resolution note (tool: PagerDuty)\n\nNever:\n- restart the database cluster without the service owner on the call\n- close the alert before the Jira ticket exists\n\nDone when:\n- The alert is resolved in PagerDuty and the Jira ticket links the timeline",
+  "decision_rules": [],
+  "forbidden_actions": [
+    {
+      "citations": [
+        {
+          "line_end": 23,
+          "line_start": 23,
+          "note_id": 1
+        }
+      ],
+      "text": "restart the database cluster without the service owner on the call"
+    },
+    {
+      "citations": [
+        {
+          "line_end": 24,
+          "line_start": 24,
+          "note_id": 1
+        }
+      ],
+      "text": "close the alert before the Jira ticket exists"
+    }
+  ],
+  "name": "Incident triage for production alerts",
+  "outcomes": [
+    {
+      "citations": [
+        {
+          "line_end": 27,
+          "line_start": 27,
+          "note_id": 1
+        }
+      ],
+      "text": "The alert is resolved in PagerDuty and the Jira ticket links the timeline"
+    }
+  ],
+  "preconditions": [
+    {
+      "citations": [
+        {
+          "line_end": 4,
+          "line_start": 4,
+          "note_id": 1
+        },
+        {
+          "line_end": 4,
+          "line_start": 4,
+          "note_id": 1,
+          "source_kind": "url",
+          "source_ref": "https://status.example.com/runbooks/triage"
+        }
+      ],
+      "text": "The alert came from the production PagerDuty service, see https://status.example.com/runbooks/triage"
+    },
+    {
+      "citations": [
+        {
+          "line_end": 5,
+          "line_start": 5,
+          "note_id": 1
+        }
+      ],
+      "text": "You are the on-call engineer listed in PagerDuty"
+    }
+  ],
+  "sources": [
+    {
+      "kind": "url",
+      "ref": "https://status.example.com/runbooks/triage"
+    },
+    {
+      "kind": "ticket",
+      "ref": "INC-77"
+    },
+    {
+      "kind": "doc",
+      "ref": "runbooks/service-triage"
+    }
+  ],
+  "steps": [
+    {
+      "action": "Acknowledge the alert in PagerDuty within 5 minutes",
+      "citations": [
+        {
+          "line_end": 14,
+          "line_start": 14,
+          "note_id": 1
+        }
+      ],
+      "condition": null,
+      "decision_rules": [],
+      "expected_outcome": null,
+      "forbidden": [],
+      "halts": false,
+      "id": "s1",
+      "order": 1,
+      "tool": "PagerDuty"
+    },
+    {
+      "action": "Open the service dashboard in Grafana and check error rate and latency for the last 30 minutes",
+      "citations": [
+        {
+          "line_end": 15,
+          "line_start": 15,
+          "note_id": 1
+        }
+      ],
+      "condition": null,
+      "decision_rules": [],
+      "expected_outcome": null,
+      "forbidden": [],
+      "halts": false,
+      "id": "s2",
+      "order": 2,
+      "tool": "Grafana"
+    },
+    {
+      "action": "declare a SEV1 in Slack and page the service owner",
+      "citations": [
+        {
+          "line_end": 16,
+          "line_start": 16,
+          "note_id": 1
+        }
+      ],
+      "condition": "error rate exceeds 5 percent",
+      "decision_rules": [],
+      "expected_outcome": null,
+      "forbidden": [],
+      "halts": false,
+      "id": "s3",
+      "order": 3,
+      "tool": "Slack"
+    },
+    {
+      "action": "post a status update in the #incidents Slack channel",
+      "citations": [
+        {
+          "line_end": 17,
+          "line_start": 17,
+          "note_id": 1
+        }
+      ],
+      "condition": "error rate is under 5 percent",
+      "decision_rules": [],
+      "expected_outcome": null,
+      "forbidden": [],
+      "halts": false,
+      "id": "s4",
+      "order": 4,
+      "tool": "Slack"
+    },
+    {
+      "action": "Create the incident ticket in Jira from template INC-77 with the alert link and the dashboard screenshot",
+      "citations": [
+        {
+          "line_end": 18,
+          "line_start": 18,
+          "note_id": 1
+        },
+        {
+          "line_end": 18,
+          "line_start": 18,
+          "note_id": 1,
+          "source_kind": "ticket",
+          "source_ref": "INC-77"
+        }
+      ],
+      "condition": null,
+      "decision_rules": [],
+      "expected_outcome": null,
+      "forbidden": [],
+      "halts": false,
+      "id": "s5",
+      "order": 5,
+      "tool": "Jira"
+    },
+    {
+      "action": "Mitigate using the runbook in doc:runbooks/service-triage",
+      "citations": [
+        {
+          "line_end": 19,
+          "line_start": 19,
+          "note_id": 1
+        },
+        {
+          "line_end": 19,
+          "line_start": 19,
+          "note_id": 1,
+          "source_kind": "doc",
+          "source_ref": "runbooks/service-triage"
+        }
+      ],
+      "condition": null,
+      "decision_rules": [],
+      "expected_outcome": "error rate back under 1 percent",
+      "forbidden": [],
+      "halts": false,
+      "id": "s6",
+      "order": 6,
+      "tool": null
+    },
+    {
+      "action": "Resolve the PagerDuty alert and link the Jira ticket in the resolution note",
+      "citations": [
+        {
+          "line_end": 20,
+          "line_start": 20,
+          "note_id": 1
+        }
+      ],
+      "condition": null,
+      "decision_rules": [],
+      "expected_outcome": null,
+      "forbidden": [],
+      "halts": false,
+      "id": "s7",
+      "order": 7,
+      "tool": "PagerDuty"
+    }
+  ],
+  "title": "Incident triage for production alerts",
+  "tools": [
+    "PagerDuty",
+    "Grafana",
+    "Slack",
+    "Jira"
+  ]
+}

@@ -1,0 +1,196 @@
+{
+  "agent_prompt": "# Refund handling for online orders\n\nBefore starting, confirm:\n- Confirm the order is within the 30-day return window (see doc:policy/refunds-v4)\n- Confirm the payment was captured, not just authorised, in Stripe\n\nFollow these steps in order:\n1. Look up the order in OrderDB by order number and verify the customer email matches the ticket (tool: OrderDB)\n2. Check the return reason against the accepted reasons list in doc:policy/refunds-v4\n   - if reason is fraud: escalate to the risk team and stop\n3. Confirm the item was received back in the warehouse (tool: OrderDB)\n   - expected: warehouse scan present in OrderDB\n4. Issue the refund in Stripe for the captured amount (tool: Stripe)\n5. Reply to the customer in Zendesk with the refund confirmation number See ticket FIN-2210 for the reply template (tool: Zendesk)\n   - expected: the ticket can be closed\n\nNever:\n- refund to a different card than the one charged\n- issue store credit instead of a refund unless the customer asks for it in writing\n\nDone when:\n- Refund appears as succeeded in Stripe and the Zendesk ticket is solved",
+  "decision_rules": [],
+  "forbidden_actions": [
+    {
+      "citations": [
+        {
+          "line_end": 21,
+          "line_start": 21,
+          "note_id": 1
+        }
+      ],
+      "text": "refund to a different card than the one charged"
+    },
+    {
+      "citations": [
+        {
+          "line_end": 22,
+          "line_start": 22,
+          "note_id": 1
+        }
+      ],
+      "text": "issue store credit instead of a refund unless the customer asks for it in writing"
+    }
+  ],
+  "name": "Refund handling for online orders",
+  "outcomes": [
+    {
+      "citations": [
+        {
+          "line_end": 25,
+          "line_start": 25,
+          "note_id": 1
+        }
+      ],
+      "text": "Refund appears as succeeded in Stripe and the Zendesk ticket is solved"
+    }
+  ],
+  "preconditions": [
+    {
+      "citations": [
+        {
+          "line_end": 4,
+          "line_start": 4,
+          "note_id": 1
+        },
+        {
+          "line_end": 4,
+          "line_start": 4,
+          "note_id": 1,
+          "source_kind": "doc",
+          "source_ref": "policy/refunds-v4"
+        }
+      ],
+      "text": "Confirm the order is within the 30-day return window (see doc:policy/refunds-v4)"
+    },
+    {
+      "citations": [
+        {
+          "line_end": 5,
+          "line_start": 5,
+          "note_id": 1
+        }
+      ],
+      "text": "Confirm the payment was captured, not just authorised, in Stripe"
+    }
+  ],
+  "sources": [
+    {
+      "kind": "doc",
+      "ref": "policy/refunds-v4"
+    },
+    {
+      "kind": "ticket",
+      "ref": "FIN-2210"
+    }
+  ],
+  "steps": [
+    {
+      "action": "Look up the order in OrderDB by order number and verify the customer email matches the ticket",
+      "citations": [
+        {
+          "line_end": 13,
+          "line_start": 13,
+          "note_id": 1
+        }
+      ],
+      "condition": null,
+      "decision_rules": [],
+      "expected_outcome": null,
+      "forbidden": [],
+      "halts": false,
+      "id": "s1",
+      "order": 1,
+      "tool": "OrderDB"
+    },
+    {
+      "action": "Check the return reason against the accepted reasons list in doc:policy/refunds-v4",
+      "citations": [
+        {
+          "line_end": 15,
+          "line_start": 14,
+          "note_id": 1
+        },
+        {
+          "line_end": 15,
+          "line_start": 14,
+          "note_id": 1,
+          "source_kind": "doc",
+          "source_ref": "policy/refunds-v4"
+        }
+      ],
+      "condition": null,
+      "decision_rules": [
+        {
+          "condition": "reason is fraud",
+          "halts": true,
+          "then": "escalate to the risk team and stop"
+        }
+      ],
+      "expected_outcome": null,
+      "forbidden": [],
+      "halts": false,
+      "id": "s2",
+      "order": 2,
+      "tool": null
+    },
+    {
+      "action": "Confirm the item was received back in the warehouse",
+      "citations": [
+        {
+          "line_end": 16,
+          "line_start": 16,
+          "note_id": 1
+        }
+      ],
+      "condition": null,
+      "decision_rules": [],
+      "expected_outcome": "warehouse scan present in OrderDB",
+      "forbidden": [],
+      "halts": false,
+      "id": "s3",
+      "order": 3,
+      "tool": "OrderDB"
+    },
+    {
+      "action": "Issue the refund in Stripe for the captured amount",
+      "citations": [
+        {
+          "line_end": 17,
+          "line_start": 17,
+          "note_id": 1
+        }
+      ],
+      "condition": null,
+      "decision_rules": [],
+      "expected_outcome": null,
+      "forbidden": [],
+      "halts": false,
+      "id": "s4",
+      "order": 4,
+      "tool": "Stripe"
+    },
+    {
+      "action": "Reply to the customer in Zendesk with the refund confirmation number See ticket FIN-2210 for the reply template",
+      "citations": [
+        {
+          "line_end": 18,
+          "line_start": 18,
+          "note_id": 1
+        },
+        {
+          "line_end": 18,
+          "line_start": 18,
+          "note_id": 1,
+          "source_kind": "ticket",
+          "source_ref": "FIN-2210"
+        }
+      ],
+      "condition": null,
+      "decision_rules": [],
+      "expected_outcome": "the ticket can be closed",
+      "forbidden": [],
+      "halts": false,
+      "id": "s5",
+      "order": 5,
+      "tool": "Zendesk"
+    }
+  ],
+  "title": "Refund handling for online orders",
+  "tools": [
+    "Stripe",
+    "Zendesk",
+    "OrderDB"
+  ]
+}

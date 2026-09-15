@@ -85,8 +85,8 @@ The API listens on `http://localhost:8090`, the fake webhook and Jira on
 
 ## Demo
 
-`make demo` registers eight sources, ingests three real expert notes from `samples/`
-(a refund-handling SOP, an onboarding checklist, an incident triage note), shows the
+`make demo` registers eight sources, ingests three sample notes written for the demo from
+`samples/` (a refund SOP, an onboarding checklist, an incident triage note), shows the
 citations, routes an edit through review, runs test cases, blocks one set on a
 forbidden-action test, fixes and re-reviews it, publishes to the fake webhook and Jira
 targets, and rolls one set back. The summary it prints is computed from the API's own
@@ -117,15 +117,23 @@ records:
   states:                set 1=published (live v2), set 2=published (live v1), set 3=published (live v2)
 ```
 
+The instruction set ids come from the database, so those are the ids a fresh stack prints;
+running `make demo` again without `make down` in between continues the sequence.
+`make demo-check` runs the same script in process against an empty schema and asserts this
+block line for line.
+
 ### Browser demo
 
-`web/` is a static site that runs the same platform in the browser: `web/src/sim/` is a pure
-TypeScript port of the packages under `expertloop/`, so the walkthrough drives the real
-compiler, drift check, state machine, executor and delivery targets rather than a mock. It
-covers citation coverage, stale sources, review policy and escalation, branch and merge
-conflicts, the publish gate and rollback, and replays the run above with the summary block
-printed here. `cd web && npm install && npm run verify` runs its 52 assertions and produces
-`dist/`; see `web/README.md`.
+`web/` is a static site that runs part of the platform in the browser. `web/src/sim/` is a
+TypeScript port of the compile, drift, review, versioning, gate and delivery paths, so the
+walkthrough executes those paths instead of replaying a recording; the executor condition
+plugin registry, the coverage report and `GET /ops/overview` are not ported. It covers
+citation coverage, stale sources, review policy and escalation, branch and merge conflicts,
+the publish gate and rollback, and replays the run above with the summary block printed
+here. The port is pinned to this repository by fixtures: `tests/test_golden.py` writes what
+the Python compiler and executor produce into `samples/expected/`, and the browser
+self-check reads those files and has to reproduce them. `cd web && npm ci && npm run verify`
+runs its 61 assertions and produces `dist/`; see `web/README.md`.
 
 ## API reference
 
@@ -150,7 +158,7 @@ All endpoints take `X-API-Key`. `admin` may call everything.
 | POST | `/instruction-sets/{id}/merge` | expert | Merge a branch into its parent (`reason`, `expected_parent_version`); 409 with `conflicts` |
 | GET | `/instruction-sets/{id}/drift` | expert, reviewer | Stale steps and open or resolved drift flags |
 | POST | `/instruction-sets/{id}/drift/verify` | expert | Re-verify stale steps (`step_ids`, or all) against the changed source |
-| PATCH | `/instruction-sets/{id}` | expert | Edit: `expected_version`, `reason`, full `document`; 409 on stale version, 422 on uncited steps |
+| PATCH | `/instruction-sets/{id}` | expert | Edit: `expected_version`, `reason`, full `document`, optional `register_unknown_sources`; 409 on stale version, 422 when the document or a citation is not valid |
 | GET | `/instruction-sets/{id}/edits` | expert, reviewer | Edit history with diffs |
 | POST | `/instruction-sets/{id}/submit` | expert | `draft` or `changes_requested` to `in_review` |
 | POST | `/instruction-sets/{id}/review` | reviewer | `approve` or `request_changes` with comment |
@@ -177,8 +185,9 @@ Test case expectations: `required_actions`, `forbidden_actions`, `expected_outco
 (free-text conditions that are simply true). Conditions are evaluated by the plugin
 registry in `expertloop/executor/plugins.py`: a plugin returns True or False when it
 understands a condition and None to pass; `flags`, `membership` (`role is one of admin,
-owner`) and `compare` ship built in, and `registry.register(plugin, first=True)` puts a
-custom grammar ahead of them.
+owner`, `region is in eu, uk` or `region in (eu, uk)`; a bare English `in` is not a
+membership operator, so `logged in user is admin` is a comparison) and `compare` ship built
+in, and `registry.register(plugin, first=True)` puts a custom grammar ahead of them.
 
 ## Data model
 
@@ -223,13 +232,31 @@ expertloop/
   demo.py      end-to-end demo driver
 alembic/       migrations
 deploy/        docker-compose stack
-samples/       three expert notes used by the demo and tests
+samples/       three sample notes used by the demo and tests, and the compiler and
+               executor fixtures the browser port is checked against
 tests/         pytest suite (PostgreSQL via Testcontainers)
-web/           static browser demo (Vite, React, TypeScript port of the packages above)
+web/           static browser demo (Vite, React; ports the compile, drift, review,
+               versioning, gate and delivery paths)
 ```
 
 See `ARCHITECTURE.md` for the compiler, citation, state machine, gating and delivery
 design, and `CONTRIBUTING.md` for the development workflow.
+
+## Limitations
+
+* The compiler is a fixed set of rules, not a parser for English. It has been exercised on
+  the three sample notes, the golden fixtures in `samples/expected/` and the compiler unit
+  tests. It handles `if X then Y` and `if X, Y` rules, `never` / `do not` / `must not`
+  clauses, `so that` / `until` / `expected:` outcomes, and reads `do not proceed until X` as
+  a guard on the step rather than a forbidden action. An `otherwise` clause is left in the
+  step's action: `If X, do it, otherwise hold` compiles to one conditional step, so when X
+  is false the executor skips the step and the else branch with it.
+* Delivery adapters have been exercised against the fake business systems in
+  `expertloop/fakes/server.py`, which check the shape of each request, and not against a
+  Jira tenant or a production webhook receiver.
+* The executor is a rule follower, not a model: it decides conditions with the plugin
+  registry and has no notion of a step it does not understand.
+* The browser demo ports part of the platform; `web/README.md` lists what is not ported.
 
 ## Releases
 
@@ -240,11 +267,35 @@ design, and `CONTRIBUTING.md` for the development workflow.
 | 3.0.0 | Review policies and SLAs | Required reviewer roles, no self-approval, review deadlines with escalation events, `GET /reviews/workload` |
 | 4.0.0 | Diff and branching | Step-level diff between versions, branch a draft from a published version, merge back with conflict detection |
 | 5.0.0 | Plugins, coverage, ops | Executor condition plugin registry, test coverage report per set and per run, `GET /ops/overview` |
+| 5.1.0 | Typed documents and the browser demo | Pydantic document schema with provenance-checked citations, row locking on every write, idempotent delivery with an ADF Jira comment, golden compiler and executor fixtures, and the static browser demo in `web/` |
 
 Each release ships with its Alembic migration, tests against PostgreSQL, and a changelog
-entry below. Tags are `v1.0.0` through `v5.0.1`.
+entry below. Tags are `v1.0.0` through `v5.0.1`; 5.1.0 is the current head and is not tagged
+yet.
 
 ## Changelog
+
+### 5.1.0
+
+* `expertloop/document.py` types the instruction document with pydantic. A citation now has
+  to be a line range in the note the set was compiled from or a reference to a source of a
+  known kind, so an empty citation object or a line past the end of the note is a 422 rather
+  than provenance. An edit that cites a source the registry does not hold is refused unless
+  it passes `register_unknown_sources`.
+* Documents that leave out an optional list no longer reach a `KeyError`: `render_prompt` and
+  the executor read every section with a default, and a decision rule without a condition is
+  rejected at the boundary.
+* The compiler reads `do not proceed until X` as a guard on the step rather than a forbidden
+  action, and no longer treats a negated stop word as an instruction to halt. `membership`
+  requires the operator to be spelled out, so `logged in user is admin` is a comparison.
+* Delivery carries a `delivery_id` that is stable across retries, skips a target that already
+  holds that version, posts the Jira comment as an Atlassian Document Format body, and audits
+  a failed rollback.
+* Every service function that writes state takes a row lock on the instruction set.
+* `tests/test_golden.py` writes what the compiler and executor produce into
+  `samples/expected/`, and the browser demo's self-check reproduces those files.
+* `web/` is a static browser demo of the compile, drift, review, versioning, gate and
+  delivery paths.
 
 ### 5.0.1
 

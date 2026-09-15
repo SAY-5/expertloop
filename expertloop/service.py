@@ -13,6 +13,7 @@ from expertloop import drift, metrics, reviews, versioning
 from expertloop.auth import Principal
 from expertloop.compiler import compile_note
 from expertloop.compiler.compile import citation_coverage, render_prompt, validate_document
+from expertloop.document import NoteContext
 from expertloop.executor import run_test_case
 from expertloop.executor.coverage import coverage_report, coverage_summary
 from expertloop.models import (
@@ -28,7 +29,7 @@ from expertloop.models import (
     TestRun,
     utcnow,
 )
-from expertloop.sources import resolve_citations
+from expertloop.sources import resolve_citations, unknown_source_refs
 from expertloop.targets.base import DeliveryError, Target
 from expertloop.workflow import EDITABLE_STATES, IllegalTransition, assert_transition
 
@@ -72,8 +73,16 @@ def _audit(
     )
 
 
-def get_instruction_set(session: Session, instruction_set_id: int) -> InstructionSet:
-    instruction_set = session.get(InstructionSet, instruction_set_id)
+def get_instruction_set(
+    session: Session, instruction_set_id: int, *, for_update: bool = False
+) -> InstructionSet:
+    """Load an instruction set, optionally locking its row for the rest of the transaction.
+
+    Every function that writes state takes the lock, so two approvals, two publishes or an
+    edit racing a merge are serialised by PostgreSQL instead of each deciding on a snapshot
+    that does not include the other's uncommitted work.
+    """
+    instruction_set = session.get(InstructionSet, instruction_set_id, with_for_update=for_update)
     if instruction_set is None:
         raise NotFound(f"instruction set {instruction_set_id} not found")
     return instruction_set
@@ -92,7 +101,7 @@ def ingest_note(
     session.flush()
     document = compile_note(body, note_id=note.id, name=title)
     linked = resolve_citations(session, document)
-    problems = validate_document(document)
+    problems = validate_document(document, NoteContext.of(note.id, body))
     if problems:
         raise Invalid("compiled document is not valid", problems)
     instruction_set = InstructionSet(
@@ -149,15 +158,29 @@ def _commit_document(
     document: dict[str, Any],
     reason: str,
     action: str = "edit",
+    register_unknown_sources: bool = False,
     **detail: Any,
 ) -> Edit:
-    """Validate a full document, store it as the next version and record the edit."""
+    """Validate a full document, store it as the next version and record the edit.
+
+    Validation is checked against the note the set was compiled from, and a citation of a
+    source the registry does not hold is refused unless the caller opts in to registering
+    it, so an edit cannot mint provenance that was never stored.
+    """
     if instruction_set.state not in EDITABLE_STATES:
         raise IllegalTransition(action, instruction_set.state)
     document = json.loads(json.dumps(document))
-    problems = validate_document(document)
+    note = instruction_set.note
+    problems = validate_document(document, NoteContext.of(note.id, note.body))
     if problems:
         raise Invalid("edited document is not valid", problems)
+    if not register_unknown_sources:
+        unknown = unknown_source_refs(session, document)
+        if unknown:
+            raise Invalid(
+                "edited document cites sources that are not registered",
+                [f"source not registered: {kind}:{ref}" for kind, ref in unknown],
+            )
     resolve_citations(session, document)
     _keep_hashes_of_unchanged_steps(instruction_set.document, document)
     document["agent_prompt"] = render_prompt(document)
@@ -211,16 +234,22 @@ def apply_edit(
     expected_version: int,
     reason: str,
     document: dict[str, Any],
+    register_unknown_sources: bool = False,
 ) -> Edit:
-    instruction_set = get_instruction_set(session, instruction_set_id)
-    if instruction_set.state not in EDITABLE_STATES:
-        raise IllegalTransition("edit", instruction_set.state)
+    instruction_set = get_instruction_set(session, instruction_set_id, for_update=True)
     if instruction_set.version != expected_version:
         raise Conflict(
             f"version mismatch: expected {expected_version}, current is {instruction_set.version}",
             {"current_version": instruction_set.version},
         )
-    edit = _commit_document(session, actor, instruction_set, document, reason)
+    edit = _commit_document(
+        session,
+        actor,
+        instruction_set,
+        document,
+        reason,
+        register_unknown_sources=register_unknown_sources,
+    )
     session.commit()
     return edit
 
@@ -259,7 +288,7 @@ def branch(
     from_version: int | None,
 ) -> InstructionSet:
     """Copy a version of a set into a new draft that can be edited and merged back."""
-    parent = get_instruction_set(session, instruction_set_id)
+    parent = get_instruction_set(session, instruction_set_id, for_update=True)
     if parent.parent_id is not None:
         raise Conflict("branches cannot be branched again; branch the parent instead")
     version = from_version or parent.published_version or parent.version
@@ -312,14 +341,14 @@ def merge(
     expected_parent_version: int | None,
 ) -> tuple[InstructionSet, Edit, dict[str, Any]]:
     """Three-way merge a branch head into its parent's head; 409 on conflicts."""
-    child = get_instruction_set(session, branch_id)
+    child = get_instruction_set(session, branch_id, for_update=True)
     if child.parent_id is None:
         raise Conflict(f"instruction set {child.id} is not a branch")
     if child.merged_at is not None:
         raise Conflict(
             f"branch {child.id} was already merged into version {child.merged_into_version}"
         )
-    parent = get_instruction_set(session, child.parent_id)
+    parent = get_instruction_set(session, child.parent_id, for_update=True)
     if expected_parent_version is not None and parent.version != expected_parent_version:
         raise Conflict(
             f"version mismatch: expected {expected_parent_version}, current is {parent.version}",
@@ -373,7 +402,7 @@ def reverify(
     session: Session, actor: Principal, instruction_set_id: int, step_ids: list[str] | None
 ) -> list[Any]:
     """An expert confirms stale steps still hold against the changed source."""
-    instruction_set = get_instruction_set(session, instruction_set_id)
+    instruction_set = get_instruction_set(session, instruction_set_id, for_update=True)
     wanted = set(step_ids) if step_ids else None
     resolved = drift.resolve_flags(session, actor, instruction_set, wanted, "reverified")
     if not resolved:
@@ -396,7 +425,7 @@ def reverify(
 def transition(
     session: Session, actor: Principal, instruction_set_id: int, action: str
 ) -> InstructionSet:
-    instruction_set = get_instruction_set(session, instruction_set_id)
+    instruction_set = get_instruction_set(session, instruction_set_id, for_update=True)
     from_state = instruction_set.state
     instruction_set.state = assert_transition(action, from_state)
     detail: dict[str, Any] = {}
@@ -417,7 +446,7 @@ def set_review_policy(
     policy: dict[str, Any],
     required_approvals: int | None,
 ) -> InstructionSet:
-    instruction_set = get_instruction_set(session, instruction_set_id)
+    instruction_set = get_instruction_set(session, instruction_set_id, for_update=True)
     if instruction_set.state == State.in_review:
         raise Conflict("the review policy cannot change while the set is in review")
     for role in policy.get("required_roles", []):
@@ -453,7 +482,7 @@ def missing_roles(session: Session, instruction_set: InstructionSet) -> list[str
 def review(
     session: Session, actor: Principal, instruction_set_id: int, decision: str, comment: str
 ) -> tuple[InstructionSet, int]:
-    instruction_set = get_instruction_set(session, instruction_set_id)
+    instruction_set = get_instruction_set(session, instruction_set_id, for_update=True)
     if instruction_set.state != State.in_review:
         raise IllegalTransition(decision, instruction_set.state)
     if reviews.is_self_approval(session, instruction_set, actor):
@@ -631,9 +660,22 @@ def _deliver(
     targets: list[Target],
     extra: dict[str, Any],
 ) -> list[Publication]:
+    already_delivered = set(
+        session.scalars(
+            select(Publication.target).where(
+                Publication.instruction_set_id == instruction_set.id,
+                Publication.version == version,
+                Publication.action == action,
+                Publication.status == "delivered",
+            )
+        ).all()
+    )
     payload = {
         "event": f"instruction_set.{action}",
         "action": action,
+        # stable across retries on purpose: a receiver that has seen this id already holds
+        # this version of this set, so a re-post is recognisable rather than a duplicate
+        "delivery_id": f"{instruction_set.id}:{version}:{action}",
         "instruction_set_id": instruction_set.id,
         "name": instruction_set.name,
         "version": version,
@@ -642,6 +684,8 @@ def _deliver(
     }
     publications: list[Publication] = []
     for target in targets:
+        if target.name in already_delivered:
+            continue
         try:
             receipt = target.deliver(payload)
             status, body = receipt.status, receipt.receipt
@@ -665,7 +709,7 @@ def _deliver(
 def publish(
     session: Session, actor: Principal, instruction_set_id: int, targets: list[Target]
 ) -> tuple[InstructionSet, list[Publication]]:
-    instruction_set = get_instruction_set(session, instruction_set_id)
+    instruction_set = get_instruction_set(session, instruction_set_id, for_update=True)
     try:
         run = _publish_gate(session, instruction_set)
     except (Conflict, IllegalTransition) as exc:
@@ -729,7 +773,7 @@ def publish(
 def rollback(
     session: Session, actor: Principal, instruction_set_id: int, targets: list[Target]
 ) -> tuple[InstructionSet, list[Publication]]:
-    instruction_set = get_instruction_set(session, instruction_set_id)
+    instruction_set = get_instruction_set(session, instruction_set_id, for_update=True)
     if instruction_set.published_version is None:
         raise Conflict("nothing is published for this instruction set")
     delivered_versions = sorted(
@@ -768,6 +812,17 @@ def rollback(
     )
     failed = [p for p in publications if p.status != "delivered"]
     if failed:
+        metrics.publishes_total.labels(result="failed").inc()
+        _audit(
+            session,
+            instruction_set,
+            actor,
+            "rollback_failed",
+            instruction_set.state,
+            instruction_set.state,
+            version=previous,
+            targets=[p.target for p in failed],
+        )
         session.commit()
         raise Conflict("rollback failed: " + ", ".join(p.target for p in failed))
     instruction_set.published_version = previous

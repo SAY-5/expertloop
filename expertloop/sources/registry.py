@@ -62,6 +62,29 @@ def resolve_citations(session: Session, document: dict[str, Any]) -> int:
     return len(linked)
 
 
+def unknown_source_refs(session: Session, document: dict[str, Any]) -> list[tuple[str, str]]:
+    """Return the ``(kind, ref)`` pairs the document cites that the registry does not hold.
+
+    Ingest registers whatever the note references, but an edit that invents a reference is
+    claiming provenance that nobody has stored, so the service layer refuses it unless the
+    editor asks for the sources to be registered.
+    """
+    unknown: list[tuple[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for cite in iter_citations(document):
+        ref = cite.get("source_ref")
+        if not ref:
+            continue
+        key = (cite.get("source_kind", "doc"), ref)
+        if key in seen:
+            continue
+        seen.add(key)
+        existing = session.scalar(select(Source).where(Source.kind == key[0], Source.ref == key[1]))
+        if existing is None:
+            unknown.append(key)
+    return unknown
+
+
 def iter_citations(document: dict[str, Any]):
     for key in ("preconditions", "steps", "decision_rules", "forbidden_actions", "outcomes"):
         for entry in document.get(key, []):

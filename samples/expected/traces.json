@@ -1,0 +1,294 @@
+{
+  "incident": [
+    {
+      "failures": [],
+      "name": "high error rate declares a SEV1",
+      "passed": true,
+      "trace": {
+        "actions": [
+          "Acknowledge the alert in PagerDuty within 5 minutes",
+          "Open the service dashboard in Grafana and check error rate and latency for the last 30 minutes",
+          "declare a SEV1 in Slack and page the service owner",
+          "Create the incident ticket in Jira from template INC-77 with the alert link and the dashboard screenshot",
+          "Mitigate using the runbook in doc:runbooks/service-triage",
+          "Resolve the PagerDuty alert and link the Jira ticket in the resolution note"
+        ],
+        "halted_at": null,
+        "outcomes": [
+          "error rate back under 1 percent",
+          "The alert is resolved in PagerDuty and the Jira ticket links the timeline"
+        ],
+        "rules_fired": [],
+        "rules_fired_ids": [],
+        "skipped": [
+          "s4"
+        ],
+        "steps_executed": [
+          "s1",
+          "s2",
+          "s3",
+          "s5",
+          "s6",
+          "s7"
+        ],
+        "tool_calls": [
+          "PagerDuty",
+          "Grafana",
+          "Slack",
+          "Jira",
+          "PagerDuty"
+        ]
+      }
+    },
+    {
+      "failures": [],
+      "name": "low error rate posts a status update",
+      "passed": true,
+      "trace": {
+        "actions": [
+          "Acknowledge the alert in PagerDuty within 5 minutes",
+          "Open the service dashboard in Grafana and check error rate and latency for the last 30 minutes",
+          "post a status update in the #incidents Slack channel",
+          "Create the incident ticket in Jira from template INC-77 with the alert link and the dashboard screenshot",
+          "Mitigate using the runbook in doc:runbooks/service-triage",
+          "Resolve the PagerDuty alert and link the Jira ticket in the resolution note"
+        ],
+        "halted_at": null,
+        "outcomes": [
+          "error rate back under 1 percent",
+          "The alert is resolved in PagerDuty and the Jira ticket links the timeline"
+        ],
+        "rules_fired": [],
+        "rules_fired_ids": [],
+        "skipped": [
+          "s3"
+        ],
+        "steps_executed": [
+          "s1",
+          "s2",
+          "s4",
+          "s5",
+          "s6",
+          "s7"
+        ],
+        "tool_calls": [
+          "PagerDuty",
+          "Grafana",
+          "Slack",
+          "Jira",
+          "PagerDuty"
+        ]
+      }
+    }
+  ],
+  "onboarding": [
+    {
+      "failures": [],
+      "name": "contractor gets outside collaborator invite",
+      "passed": true,
+      "trace": {
+        "actions": [
+          "Create the Okta account using the corporate email from Workday",
+          "Add the account to the engineering group in Okta",
+          "invite as an outside collaborator on the named repositories only",
+          "Invite the GitHub user to the organisation with the team listed in the access request form",
+          "Add the person to the #eng-announcements and team channels in Slack",
+          "Create the onboarding epic in Jira from template ONB-100 and assign it to the new hire",
+          "Send the welcome message in Slack with the links from doc:onboarding/week-one"
+        ],
+        "halted_at": null,
+        "outcomes": [
+          "GitHub and Jira SSO work",
+          "The new hire can open GitHub, Jira and Slack through Okta"
+        ],
+        "rules_fired": [
+          "s3: if the role is contractor then invite as an outside collaborator on the named repositories only"
+        ],
+        "rules_fired_ids": [
+          "s3:0"
+        ],
+        "skipped": [],
+        "steps_executed": [
+          "s1",
+          "s2",
+          "s3",
+          "s4",
+          "s5",
+          "s6"
+        ],
+        "tool_calls": [
+          "Okta",
+          "Okta",
+          "GitHub",
+          "Slack",
+          "Jira",
+          "Slack"
+        ]
+      }
+    },
+    {
+      "failures": [],
+      "name": "far start date halts the checklist",
+      "passed": true,
+      "trace": {
+        "actions": [
+          "stop and schedule the checklist for the start date"
+        ],
+        "halted_at": "global",
+        "outcomes": [],
+        "rules_fired": [
+          "global: if the start date is more than 7 days away then stop and schedule the checklist for the start date"
+        ],
+        "rules_fired_ids": [
+          "global:0"
+        ],
+        "skipped": [],
+        "steps_executed": [],
+        "tool_calls": []
+      }
+    },
+    {
+      "failures": [],
+      "name": "never grants admin",
+      "passed": true,
+      "trace": {
+        "actions": [
+          "Create the Okta account using the corporate email from Workday",
+          "Add the account to the engineering group in Okta",
+          "Invite the GitHub user to the organisation with the team listed in the access request form",
+          "Add the person to the #eng-announcements and team channels in Slack",
+          "Create the onboarding epic in Jira from template ONB-100 and assign it to the new hire",
+          "Send the welcome message in Slack with the links from doc:onboarding/week-one"
+        ],
+        "halted_at": null,
+        "outcomes": [
+          "GitHub and Jira SSO work",
+          "The new hire can open GitHub, Jira and Slack through Okta"
+        ],
+        "rules_fired": [],
+        "rules_fired_ids": [],
+        "skipped": [],
+        "steps_executed": [
+          "s1",
+          "s2",
+          "s3",
+          "s4",
+          "s5",
+          "s6"
+        ],
+        "tool_calls": [
+          "Okta",
+          "Okta",
+          "GitHub",
+          "Slack",
+          "Jira",
+          "Slack"
+        ]
+      }
+    }
+  ],
+  "refund": [
+    {
+      "failures": [],
+      "name": "fraud escalates to the risk team",
+      "passed": true,
+      "trace": {
+        "actions": [
+          "Look up the order in OrderDB by order number and verify the customer email matches the ticket",
+          "escalate to the risk team and stop"
+        ],
+        "halted_at": "s2",
+        "outcomes": [],
+        "rules_fired": [
+          "s2: if reason is fraud then escalate to the risk team and stop"
+        ],
+        "rules_fired_ids": [
+          "s2:0"
+        ],
+        "skipped": [],
+        "steps_executed": [
+          "s1"
+        ],
+        "tool_calls": [
+          "OrderDB"
+        ]
+      }
+    },
+    {
+      "failures": [],
+      "name": "standard refund completes",
+      "passed": true,
+      "trace": {
+        "actions": [
+          "Look up the order in OrderDB by order number and verify the customer email matches the ticket",
+          "Check the return reason against the accepted reasons list in doc:policy/refunds-v4",
+          "Confirm the item was received back in the warehouse",
+          "Issue the refund in Stripe for the captured amount",
+          "Reply to the customer in Zendesk with the refund confirmation number See ticket FIN-2210 for the reply template"
+        ],
+        "halted_at": null,
+        "outcomes": [
+          "warehouse scan present in OrderDB",
+          "the ticket can be closed",
+          "Refund appears as succeeded in Stripe and the Zendesk ticket is solved"
+        ],
+        "rules_fired": [],
+        "rules_fired_ids": [],
+        "skipped": [],
+        "steps_executed": [
+          "s1",
+          "s2",
+          "s3",
+          "s4",
+          "s5"
+        ],
+        "tool_calls": [
+          "OrderDB",
+          "OrderDB",
+          "Stripe",
+          "Zendesk"
+        ]
+      }
+    },
+    {
+      "failures": [
+        "required action not taken: 'manager'",
+        "forbidden action taken: 'Issue the refund'",
+        "execution was expected to halt but ran to completion"
+      ],
+      "name": "high value refund needs manager approval",
+      "passed": false,
+      "trace": {
+        "actions": [
+          "Look up the order in OrderDB by order number and verify the customer email matches the ticket",
+          "Check the return reason against the accepted reasons list in doc:policy/refunds-v4",
+          "Confirm the item was received back in the warehouse",
+          "Issue the refund in Stripe for the captured amount",
+          "Reply to the customer in Zendesk with the refund confirmation number See ticket FIN-2210 for the reply template"
+        ],
+        "halted_at": null,
+        "outcomes": [
+          "warehouse scan present in OrderDB",
+          "the ticket can be closed",
+          "Refund appears as succeeded in Stripe and the Zendesk ticket is solved"
+        ],
+        "rules_fired": [],
+        "rules_fired_ids": [],
+        "skipped": [],
+        "steps_executed": [
+          "s1",
+          "s2",
+          "s3",
+          "s4",
+          "s5"
+        ],
+        "tool_calls": [
+          "OrderDB",
+          "OrderDB",
+          "Stripe",
+          "Zendesk"
+        ]
+      }
+    }
+  ]
+}

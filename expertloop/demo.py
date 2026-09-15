@@ -140,14 +140,27 @@ TEST_CASES: dict[str, list[tuple[str, dict[str, Any], dict[str, Any]]]] = {
 
 
 class Demo:
-    def __init__(self, api: str, fakes: str) -> None:
-        self.api = httpx.Client(base_url=api, timeout=30.0)
-        self.fakes = httpx.Client(base_url=fakes, timeout=30.0)
+    """The demo script. It talks to two httpx clients, so the same sequence runs against a
+    live stack over HTTP and against ``TestClient`` in process, which is what pins the
+    summary block quoted in the README."""
+
+    def __init__(
+        self, api: httpx.Client, fakes: httpx.Client, keys: dict[str, str] | None = None
+    ) -> None:
+        self.api = api
+        self.fakes = fakes
+        self.keys = keys or KEYS
         self.sets: dict[str, int] = {}
         self.blocked = 0
 
+    @classmethod
+    def over_http(cls, api: str, fakes: str) -> Demo:
+        return cls(
+            httpx.Client(base_url=api, timeout=30.0), httpx.Client(base_url=fakes, timeout=30.0)
+        )
+
     def call(self, user: str, method: str, path: str, expect: int = 200, **kwargs: Any) -> Any:
-        response = self.api.request(method, path, headers={"X-API-Key": KEYS[user]}, **kwargs)
+        response = self.api.request(method, path, headers={"X-API-Key": self.keys[user]}, **kwargs)
         if response.status_code != expect:
             print(f"unexpected {response.status_code} for {method} {path}: {response.text}")
             sys.exit(1)
@@ -303,7 +316,7 @@ class Demo:
 
     def publish(self, set_id: int) -> bool:
         response = self.api.post(
-            f"/instruction-sets/{set_id}/publish", headers={"X-API-Key": KEYS["ops"]}
+            f"/instruction-sets/{set_id}/publish", headers={"X-API-Key": self.keys["ops"]}
         )
         if response.status_code == 409:
             self.blocked += 1
@@ -462,23 +475,27 @@ class Demo:
             )
         )
 
+    def run(self) -> None:
+        """The whole script, from a clean set of fake business systems to the summary."""
+        self.fakes.post("/_reset")
+        self.ingest()
+        self.show_citations()
+        self.add_test_cases()
+        self.review()
+        self.gate()
+        self.rollback()
+        self.overview()
+        self.summary()
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="ExpertLoop end-to-end demo")
     parser.add_argument("--api", default="http://localhost:8090")
     parser.add_argument("--fakes", default="http://localhost:8081")
     args = parser.parse_args()
-    demo = Demo(args.api, args.fakes)
+    demo = Demo.over_http(args.api, args.fakes)
     demo.wait()
-    demo.fakes.post("/_reset")
-    demo.ingest()
-    demo.show_citations()
-    demo.add_test_cases()
-    demo.review()
-    demo.gate()
-    demo.rollback()
-    demo.overview()
-    demo.summary()
+    demo.run()
 
 
 if __name__ == "__main__":
