@@ -13,6 +13,7 @@ from expertloop import drift, metrics, reviews, versioning
 from expertloop.auth import Principal
 from expertloop.compiler import compile_note
 from expertloop.compiler.compile import citation_coverage, render_prompt, validate_document
+from expertloop.document import NoteContext
 from expertloop.executor import run_test_case
 from expertloop.executor.coverage import coverage_report, coverage_summary
 from expertloop.models import (
@@ -28,7 +29,7 @@ from expertloop.models import (
     TestRun,
     utcnow,
 )
-from expertloop.sources import resolve_citations
+from expertloop.sources import resolve_citations, unknown_source_refs
 from expertloop.targets.base import DeliveryError, Target
 from expertloop.workflow import EDITABLE_STATES, IllegalTransition, assert_transition
 
@@ -92,7 +93,7 @@ def ingest_note(
     session.flush()
     document = compile_note(body, note_id=note.id, name=title)
     linked = resolve_citations(session, document)
-    problems = validate_document(document)
+    problems = validate_document(document, NoteContext.of(note.id, body))
     if problems:
         raise Invalid("compiled document is not valid", problems)
     instruction_set = InstructionSet(
@@ -149,15 +150,29 @@ def _commit_document(
     document: dict[str, Any],
     reason: str,
     action: str = "edit",
+    register_unknown_sources: bool = False,
     **detail: Any,
 ) -> Edit:
-    """Validate a full document, store it as the next version and record the edit."""
+    """Validate a full document, store it as the next version and record the edit.
+
+    Validation is checked against the note the set was compiled from, and a citation of a
+    source the registry does not hold is refused unless the caller opts in to registering
+    it, so an edit cannot mint provenance that was never stored.
+    """
     if instruction_set.state not in EDITABLE_STATES:
         raise IllegalTransition(action, instruction_set.state)
     document = json.loads(json.dumps(document))
-    problems = validate_document(document)
+    note = instruction_set.note
+    problems = validate_document(document, NoteContext.of(note.id, note.body))
     if problems:
         raise Invalid("edited document is not valid", problems)
+    if not register_unknown_sources:
+        unknown = unknown_source_refs(session, document)
+        if unknown:
+            raise Invalid(
+                "edited document cites sources that are not registered",
+                [f"source not registered: {kind}:{ref}" for kind, ref in unknown],
+            )
     resolve_citations(session, document)
     _keep_hashes_of_unchanged_steps(instruction_set.document, document)
     document["agent_prompt"] = render_prompt(document)
@@ -211,6 +226,7 @@ def apply_edit(
     expected_version: int,
     reason: str,
     document: dict[str, Any],
+    register_unknown_sources: bool = False,
 ) -> Edit:
     instruction_set = get_instruction_set(session, instruction_set_id)
     if instruction_set.state not in EDITABLE_STATES:
@@ -220,7 +236,14 @@ def apply_edit(
             f"version mismatch: expected {expected_version}, current is {instruction_set.version}",
             {"current_version": instruction_set.version},
         )
-    edit = _commit_document(session, actor, instruction_set, document, reason)
+    edit = _commit_document(
+        session,
+        actor,
+        instruction_set,
+        document,
+        reason,
+        register_unknown_sources=register_unknown_sources,
+    )
     session.commit()
     return edit
 

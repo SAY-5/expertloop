@@ -172,7 +172,13 @@ def edit(
     principal: Principal = Depends(require_role("expert")),
 ) -> Any:
     return service.apply_edit(
-        session, principal, instruction_set_id, body.expected_version, body.reason, body.document
+        session,
+        principal,
+        instruction_set_id,
+        body.expected_version,
+        body.reason,
+        body.document,
+        register_unknown_sources=body.register_unknown_sources,
     )
 
 

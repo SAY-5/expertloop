@@ -124,11 +124,12 @@ def _apply_rules(
 ) -> bool:
     """Fire matching rules. Return True when execution must halt."""
     for index, rule in enumerate(rules):
-        if evaluate_condition(rule["condition"], scenario):
-            trace.rules_fired.append(f"{label}: if {rule['condition']} then {rule['then']}")
+        condition, then = rule.get("condition", ""), rule.get("then", "")
+        if condition and evaluate_condition(condition, scenario):
+            trace.rules_fired.append(f"{label}: if {condition} then {then}")
             trace.rules_fired_ids.append(f"{label}:{index}")
-            trace.actions.append(rule["then"])
-            if rule.get("halts") or any(w in rule["then"].lower() for w in STOP_WORDS):
+            trace.actions.append(then)
+            if rule.get("halts") or any(w in then.lower() for w in STOP_WORDS):
                 trace.halted_at = label
                 return True
     return False

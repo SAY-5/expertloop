@@ -83,3 +83,58 @@ def test_edit_is_refused_while_in_review(client):
     response = edit(client, set_id, doc, "late edit", expected_version=1)
     assert response.status_code == 409
     assert response.json()["state"] == "in_review"
+
+
+def test_edit_may_omit_an_empty_rule_list(client):
+    set_id = ingest(client, "onboarding_checklist.md")["instruction_set"]["id"]
+    doc = copy.deepcopy(get_set(client, set_id)["document"])
+    del doc["steps"][0]["decision_rules"]
+    doc["steps"][0]["action"] += " from the Workday record"
+    assert (
+        edit(client, set_id, doc, "drop an empty rule list", expected_version=1).status_code == 200
+    )
+    assert "Workday record" in get_set(client, set_id)["document"]["agent_prompt"]
+
+
+def test_edit_citing_an_unregistered_source_is_refused(client):
+    set_id = ingest(client, "refund_handling_sop.md")["instruction_set"]["id"]
+    doc = copy.deepcopy(get_set(client, set_id)["document"])
+    doc["steps"][0]["citations"].append({"source_kind": "doc", "source_ref": "made/up-policy"})
+    refused = edit(client, set_id, doc, "cite a policy nobody stored", expected_version=1)
+    assert refused.status_code == 422
+    assert refused.json()["problems"] == ["source not registered: doc:made/up-policy"]
+    assert get_set(client, set_id)["version"] == 1
+
+    accepted = client.patch(
+        f"/instruction-sets/{set_id}",
+        json={
+            "expected_version": 1,
+            "reason": "cite the new policy and register it",
+            "document": doc,
+            "register_unknown_sources": True,
+        },
+        headers=headers("expert"),
+    )
+    assert accepted.status_code == 200, accepted.text
+    refs = [s["ref"] for s in client.get("/sources", headers=headers("expert")).json()]
+    assert "made/up-policy" in refs
+
+
+def test_edit_citing_a_line_the_note_does_not_have_is_refused(client):
+    set_id = ingest(client, "refund_handling_sop.md")["instruction_set"]["id"]
+    doc = copy.deepcopy(get_set(client, set_id)["document"])
+    doc["steps"][0]["citations"][0]["line_end"] = 400
+    refused = edit(client, set_id, doc, "cite a line past the end", expected_version=1)
+    assert refused.status_code == 422
+    assert refused.json()["problems"] == [
+        "step s1 citation 1 cites note lines 13-400, but note 1 has 25 lines"
+    ]
+
+
+def test_edit_adding_a_rule_without_a_condition_is_refused(client):
+    set_id = ingest(client, "refund_handling_sop.md")["instruction_set"]["id"]
+    doc = copy.deepcopy(get_set(client, set_id)["document"])
+    doc["steps"][3]["decision_rules"].append({"then": "request manager approval and stop"})
+    refused = edit(client, set_id, doc, "add a rule with no condition", expected_version=1)
+    assert refused.status_code == 422
+    assert refused.json()["problems"] == ["steps.3.decision_rules.0.condition: Field required"]

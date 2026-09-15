@@ -37,9 +37,15 @@ keeps its 1-based line range. Inline references are extracted in a fixed order: 
 * `tool`: the first known tool mentioned, or a capitalised name after `in`, `via`, `open`, `call`
 * `citations`: always the note line range, plus one citation per source reference on the item
 
-Citations are the contract: `validate_document` rejects any document with a step that has
-no citation, both at ingest and on every edit, so coverage is 100% by construction. The
-compiler is deterministic; there is no model call in the default path. A rewriting model
+Citations are the contract. `expertloop/document.py` types the document with pydantic, and
+`validate_document` rejects a step with no citation, a citation that is neither a line range
+in the note nor a reference to a source of a known kind, and a line range that points past
+the end of that note or at a different note. The check runs at ingest and on every edit, so
+every stored step carries provenance that can be resolved rather than a list that is merely
+non-empty. An edit that cites a source the registry does not hold is refused with 422 unless
+it passes `register_unknown_sources`, which keeps automatic registration at ingest, where the
+note itself is the evidence. The compiler is deterministic; there is no model call in the
+default path. A rewriting model
 can be layered on top as an optional edit author, but it never bypasses validation.
 
 `expertloop/sources/registry.py` stores each referenced source with a SHA-256 of its

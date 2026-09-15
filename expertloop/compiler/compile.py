@@ -11,6 +11,7 @@ import re
 from typing import Any
 
 from expertloop.compiler.parser import NoteItem, ParsedNote, SourceRef, parse_note
+from expertloop.document import NoteContext, document_problems
 
 TOOL_RE = re.compile(
     r"\b(?:in|via|using|through|open|call|from)\s+([A-Z][A-Za-z0-9]+(?:\s[A-Z][A-Za-z0-9]+)?)"
@@ -184,33 +185,41 @@ def compile_note(body: str, note_id: int | None = None, name: str | None = None)
 
 
 def render_prompt(document: dict[str, Any]) -> str:
-    """Render the instruction set as the text an agent will receive."""
-    lines = [f"# {document['title']}", ""]
-    if document["preconditions"]:
+    """Render the instruction set as the text an agent will receive.
+
+    Every section is read with a default so that rendering a document an older release
+    stored without one is a prompt with that section missing, not a ``KeyError``.
+    """
+    lines = [f"# {document.get('title', '')}", ""]
+    preconditions = document.get("preconditions") or []
+    if preconditions:
         lines.append("Before starting, confirm:")
-        lines.extend(f"- {p['text']}" for p in document["preconditions"])
+        lines.extend(f"- {p.get('text', '')}" for p in preconditions)
         lines.append("")
     lines.append("Follow these steps in order:")
-    for step in document["steps"]:
+    for step in document.get("steps") or []:
         tool = f" (tool: {step['tool']})" if step.get("tool") else ""
         gate = f"Only if {step['condition']}: " if step.get("condition") else ""
-        lines.append(f"{step['order']}. {gate}{step['action']}{tool}")
-        for rule in step["decision_rules"]:
-            lines.append(f"   - if {rule['condition']}: {rule['then']}")
+        lines.append(f"{step.get('order', 0)}. {gate}{step.get('action', '')}{tool}")
+        for rule in step.get("decision_rules") or []:
+            lines.append(f"   - if {rule.get('condition', '')}: {rule.get('then', '')}")
         if step.get("expected_outcome"):
             lines.append(f"   - expected: {step['expected_outcome']}")
-    if document["decision_rules"]:
+    global_rules = document.get("decision_rules") or []
+    if global_rules:
         lines.append("")
         lines.append("Decision rules:")
-        lines.extend(f"- if {r['condition']}: {r['then']}" for r in document["decision_rules"])
-    if document["forbidden_actions"]:
+        lines.extend(f"- if {r.get('condition', '')}: {r.get('then', '')}" for r in global_rules)
+    forbidden_actions = document.get("forbidden_actions") or []
+    if forbidden_actions:
         lines.append("")
         lines.append("Never:")
-        lines.extend(f"- {f['text']}" for f in document["forbidden_actions"])
-    if document["outcomes"]:
+        lines.extend(f"- {f.get('text', '')}" for f in forbidden_actions)
+    outcomes = document.get("outcomes") or []
+    if outcomes:
         lines.append("")
         lines.append("Done when:")
-        lines.extend(f"- {o['text']}" for o in document["outcomes"])
+        lines.extend(f"- {o.get('text', '')}" for o in outcomes)
     return "\n".join(lines)
 
 
@@ -226,20 +235,11 @@ def citation_coverage(document: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def validate_document(document: dict[str, Any]) -> list[str]:
-    """Return a list of problems; an empty list means the document is acceptable."""
-    problems: list[str] = []
-    for key in ("title", "steps", "preconditions", "decision_rules", "forbidden_actions"):
-        if key not in document:
-            problems.append(f"missing field: {key}")
-    for step in document.get("steps", []):
-        if not step.get("id"):
-            problems.append("step without id")
-        if not step.get("action"):
-            problems.append(f"step {step.get('id')} has no action")
-        if not step.get("citations"):
-            problems.append(f"step {step.get('id')} has no citations")
-    ids = [s.get("id") for s in document.get("steps", [])]
-    if len(ids) != len(set(ids)):
-        problems.append("duplicate step ids")
-    return problems
+def validate_document(document: dict[str, Any], note: NoteContext | None = None) -> list[str]:
+    """Return a list of problems; an empty list means the document is acceptable.
+
+    The shape is checked by :mod:`expertloop.document`. Passing ``note`` adds the checks
+    that need the note the instruction set was compiled from, so a line-range citation
+    cannot point past the end of that note or at a different note altogether.
+    """
+    return document_problems(document, note)

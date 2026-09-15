@@ -150,7 +150,7 @@ All endpoints take `X-API-Key`. `admin` may call everything.
 | POST | `/instruction-sets/{id}/merge` | expert | Merge a branch into its parent (`reason`, `expected_parent_version`); 409 with `conflicts` |
 | GET | `/instruction-sets/{id}/drift` | expert, reviewer | Stale steps and open or resolved drift flags |
 | POST | `/instruction-sets/{id}/drift/verify` | expert | Re-verify stale steps (`step_ids`, or all) against the changed source |
-| PATCH | `/instruction-sets/{id}` | expert | Edit: `expected_version`, `reason`, full `document`; 409 on stale version, 422 on uncited steps |
+| PATCH | `/instruction-sets/{id}` | expert | Edit: `expected_version`, `reason`, full `document`, optional `register_unknown_sources`; 409 on stale version, 422 when the document or a citation is not valid |
 | GET | `/instruction-sets/{id}/edits` | expert, reviewer | Edit history with diffs |
 | POST | `/instruction-sets/{id}/submit` | expert | `draft` or `changes_requested` to `in_review` |
 | POST | `/instruction-sets/{id}/review` | reviewer | `approve` or `request_changes` with comment |
