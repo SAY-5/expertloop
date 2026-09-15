@@ -186,6 +186,16 @@ back; the head keeps its state so the faulty revision can be fixed and re-publis
 mimics the Jira comment and attachment endpoints; the compose stack and the test suite use
 it as the business system.
 
+## Browser port
+
+`web/` is a static site that runs part of this design in the browser: `web/src/sim/` ports the
+compile, drift, review, versioning, gate and delivery paths to TypeScript with a seeded PRNG
+and a virtual clock, and no network calls. The condition plugin registry, the coverage report
+and `GET /ops/overview` are not ported. `tests/test_golden.py` writes the documents and traces
+the Python compiler and executor produce into `samples/expected/`, and the port's self-check
+reads those files and has to reproduce them, so the two implementations cannot drift silently.
+See `web/README.md`.
+
 ## Observability
 
 `/metrics` exposes instruction sets by state, cumulative test pass rate, test runs by

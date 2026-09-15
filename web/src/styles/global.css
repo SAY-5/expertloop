@@ -10,7 +10,8 @@
   --line-strong: rgba(255, 233, 250, 0.18);
   --text: #f4ecf2;
   --text-dim: #b9a9b8;
-  --text-mute: #7d6d7e;
+  /* 6.01:1 on --ink-1 and 5.68:1 on --ink-2; the previous #7d6d7e was 3.98:1 */
+  --text-mute: #9c8b9c;
   --plum: #e04fd6;
   --plum-deep: #9a2c93;
   --plum-soft: rgba(224, 79, 214, 0.16);
@@ -18,7 +19,8 @@
   --paper: #f6efe4;
   --paper-2: #efe5d5;
   --paper-ink: #2a1f2c;
-  --paper-mute: #8b7a83;
+  /* 5.23:1 on --paper; the previous #8b7a83 was 3.53:1 */
+  --paper-mute: #6f5f68;
   --paper-line: rgba(42, 31, 44, 0.12);
   --ok: #7be0a4;
   --ok-soft: rgba(123, 224, 164, 0.16);
@@ -222,14 +224,15 @@ a.btn {
 }
 
 .btn-plum {
-  background: linear-gradient(135deg, var(--plum), var(--plum-deep));
+  /* #fff8fd is 5.07:1 on #b3379f and 6.37:1 on --plum-deep, so the label clears AA across
+     the whole gradient; over the old --plum start it was 3.21:1 */
+  background: linear-gradient(135deg, #b3379f, var(--plum-deep));
   border-color: transparent;
   color: #fff8fd;
   box-shadow: 0 10px 30px rgba(224, 79, 214, 0.25);
 }
 
 .btn-plum:hover:not(:disabled) {
-  background: linear-gradient(135deg, #ef67e5, #b135a9);
   box-shadow: 0 14px 40px rgba(224, 79, 214, 0.4);
 }
 
@@ -255,7 +258,7 @@ a.btn {
   padding: 3px 9px;
   border-radius: 999px;
   font-family: var(--mono);
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   letter-spacing: 0.03em;
   border: 1px solid var(--line-strong);
   color: var(--text-dim);
@@ -462,6 +465,19 @@ a.btn {
 
   .footer-checks {
     columns: 1;
+  }
+
+  /* a full-viewport blur behind 25 panels plus a blended noise layer costs more than it
+     adds on a phone */
+  .glass {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: var(--ink-2);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+  }
+
+  body::after {
+    display: none;
   }
 }
 

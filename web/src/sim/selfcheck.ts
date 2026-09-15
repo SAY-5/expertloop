@@ -10,11 +10,11 @@
  */
 
 import { type InstructionDocument, citationCoverage, compileNote } from "./compile";
-import { README_SUMMARY, runDemo, summaryBlock } from "./demo";
+import { README_SUMMARY, type DemoWorld, runDemo, summaryBlock } from "./demo";
 import { PEOPLE, SAMPLE_NOTES, SAMPLE_TEST_CASES } from "./fixtures";
-import { createWorld, registerSources, ingestAll, addTestCases, reviewRound, runTests, publish, edit, applyManagerThreshold } from "./demo";
+import { createWorld, createSeededWorld, registerSources, ingestAll, addTestCases, reviewRound, runTests, publish, edit, applyManagerThreshold } from "./demo";
 import { HOUR_MS } from "./reviews";
-import { Conflict } from "./service";
+import { Conflict, Invalid } from "./service";
 import { assertTransition, IllegalTransition } from "./state";
 import { verifySignature } from "./targets";
 import { sha256, hmacSha256 } from "./sha256";
@@ -24,6 +24,7 @@ import compiledIncident from "../../../samples/expected/compiled_incident.json";
 import compiledOnboarding from "../../../samples/expected/compiled_onboarding.json";
 import compiledPhrasings from "../../../samples/expected/compiled_phrasings.json";
 import compiledRefund from "../../../samples/expected/compiled_refund.json";
+import demoSummaryFixture from "../../../samples/expected/demo_summary.json";
 import goldenTraces from "../../../samples/expected/traces.json";
 
 /** Key order does not matter when comparing with a fixture the Python suite wrote. */
@@ -190,7 +191,60 @@ export function selfCheck(): CheckResult[] {
     summaryBlock(summary) === README_SUMMARY,
     summaryBlock(summary) === README_SUMMARY ? "" : summaryBlock(summary),
   );
+  check(
+    results,
+    "demo summary matches the block the Python demo printed",
+    summaryBlock(summary) === (demoSummaryFixture as { summary_block: string }).summary_block,
+    "samples/expected/demo_summary.json",
+  );
   check(results, "sample test case count", Object.values(SAMPLE_TEST_CASES).flat().length === 8);
+
+  // --- the two behaviours the copy claims -----------------------------------
+  const uncitedWorld = createSeededWorld();
+  const uncited = JSON.parse(
+    JSON.stringify(uncitedWorld.service.getSet(uncitedWorld.sets.onboarding).document),
+  ) as InstructionDocument;
+  uncited.steps[2].citations = [];
+  let uncitedProblems: string[] = [];
+  try {
+    uncitedWorld.service.applyEdit(PEOPLE.dana, uncitedWorld.sets.onboarding, 1, "drop a citation", uncited);
+  } catch (error) {
+    if (error instanceof Invalid) uncitedProblems = error.problems;
+  }
+  check(
+    results,
+    "an edit that drops a citation is refused, naming the step",
+    uncitedProblems.includes("step s3 has no citations"),
+    uncitedProblems.join("; ") || "the edit was accepted",
+  );
+
+  const records = (world: DemoWorld) => ({
+    sets: world.service.sets,
+    edits: world.service.edits,
+    reviews: world.service.reviews,
+    runs: world.service.testRuns,
+    publications: world.service.publications,
+  });
+  check(
+    results,
+    "two runs of the demo produce identical records",
+    JSON.stringify(canonical(records(runDemo().world))) === JSON.stringify(canonical(records(runDemo().world))),
+  );
+
+  const rehashWorld = createSeededWorld();
+  const weekOneSource = rehashWorld.service.registry.find("doc", "onboarding/week-one");
+  const onboardingDoc = () => rehashWorld.service.getSet(rehashWorld.sets.onboarding).document;
+  const verifiedBefore = rehashWorld.service.registry.verifyCitations(onboardingDoc()).every((r) => r.verified);
+  if (weekOneSource) rehashWorld.service.rehashSource(PEOPLE.ops, weekOneSource.id, "Handbook only.");
+  const unverifiedAfter = rehashWorld.service.registry
+    .verifyCitations(onboardingDoc())
+    .filter((r) => !r.verified);
+  check(
+    results,
+    "a citation reads as unverified once its source is rehashed",
+    verifiedBefore && unverifiedAfter.length > 0,
+    `${unverifiedAfter.length} unverified after the rewrite`,
+  );
 
   // --- source drift: per-step hashes and the stale-step publish block -------
   const driftWorld = createWorld();

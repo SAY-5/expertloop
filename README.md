@@ -128,7 +128,7 @@ the publish gate and rollback, and replays the run above with the summary block 
 here. The port is pinned to this repository by fixtures: `tests/test_golden.py` writes what
 the Python compiler and executor produce into `samples/expected/`, and the browser
 self-check reads those files and has to reproduce them. `cd web && npm ci && npm run verify`
-runs its 57 assertions and produces `dist/`; see `web/README.md`.
+runs its 61 assertions and produces `dist/`; see `web/README.md`.
 
 ## API reference
 
@@ -262,11 +262,35 @@ design, and `CONTRIBUTING.md` for the development workflow.
 | 3.0.0 | Review policies and SLAs | Required reviewer roles, no self-approval, review deadlines with escalation events, `GET /reviews/workload` |
 | 4.0.0 | Diff and branching | Step-level diff between versions, branch a draft from a published version, merge back with conflict detection |
 | 5.0.0 | Plugins, coverage, ops | Executor condition plugin registry, test coverage report per set and per run, `GET /ops/overview` |
+| 5.1.0 | Typed documents and the browser demo | Pydantic document schema with provenance-checked citations, row locking on every write, idempotent delivery with an ADF Jira comment, golden compiler and executor fixtures, and the static browser demo in `web/` |
 
 Each release ships with its Alembic migration, tests against PostgreSQL, and a changelog
-entry below. Tags are `v1.0.0` through `v5.0.1`.
+entry below. Tags are `v1.0.0` through `v5.0.1`; 5.1.0 is the current head and is not tagged
+yet.
 
 ## Changelog
+
+### 5.1.0
+
+* `expertloop/document.py` types the instruction document with pydantic. A citation now has
+  to be a line range in the note the set was compiled from or a reference to a source of a
+  known kind, so an empty citation object or a line past the end of the note is a 422 rather
+  than provenance. An edit that cites a source the registry does not hold is refused unless
+  it passes `register_unknown_sources`.
+* Documents that leave out an optional list no longer reach a `KeyError`: `render_prompt` and
+  the executor read every section with a default, and a decision rule without a condition is
+  rejected at the boundary.
+* The compiler reads `do not proceed until X` as a guard on the step rather than a forbidden
+  action, and no longer treats a negated stop word as an instruction to halt. `membership`
+  requires the operator to be spelled out, so `logged in user is admin` is a comparison.
+* Delivery carries a `delivery_id` that is stable across retries, skips a target that already
+  holds that version, posts the Jira comment as an Atlassian Document Format body, and audits
+  a failed rollback.
+* Every service function that writes state takes a row lock on the instruction set.
+* `tests/test_golden.py` writes what the compiler and executor produce into
+  `samples/expected/`, and the browser demo's self-check reproduces those files.
+* `web/` is a static browser demo of the compile, drift, review, versioning, gate and
+  delivery paths.
 
 ### 5.0.1
 

@@ -4,103 +4,77 @@ import { type InstructionDocument } from "../sim/compile";
 import { parseDiff } from "../sim/diff";
 import { PEOPLE } from "../sim/fixtures";
 import { Conflict, Invalid } from "../sim/service";
-import { type Action, IllegalTransition, STATES, type State, TRANSITIONS } from "../sim/state";
+import { type Action, IllegalTransition, type State, TRANSITIONS } from "../sim/state";
 import { useWorld } from "../store";
 
 const SET_KEY = "incident" as const;
 
-const NODE: Record<State, { x: number; y: number }> = {
-  draft: { x: 90, y: 170 },
-  in_review: { x: 262, y: 170 },
-  changes_requested: { x: 262, y: 58 },
-  approved: { x: 434, y: 170 },
-  published: { x: 606, y: 170 },
-  retired: { x: 766, y: 170 },
+const EDGE_LABEL: Record<Action, string> = {
+  submit: "submit",
+  request_changes: "request changes",
+  resubmit: "resubmit",
+  approve: "approve",
+  edit_after_approval: "edit",
+  publish: "publish",
+  revise: "edit (revise)",
+  retire: "retire",
 };
 
-const EDGE: Record<Action, { d: string; label: string; lx: number; ly: number }> = {
-  submit: { d: "M138 170 L214 170", label: "submit", lx: 176, ly: 158 },
-  request_changes: { d: "M280 150 L280 78", label: "request changes", lx: 336, ly: 118 },
-  resubmit: { d: "M244 78 L244 150", label: "resubmit", lx: 208, ly: 118 },
-  approve: { d: "M310 170 L386 170", label: "approve", lx: 348, ly: 158 },
-  edit_after_approval: { d: "M434 190 C 434 262, 90 262, 90 190", label: "edit", lx: 262, ly: 250 },
-  publish: { d: "M482 170 L558 170", label: "publish", lx: 520, ly: 158 },
-  revise: { d: "M606 190 C 606 300, 90 300, 90 190", label: "edit (revise)", lx: 348, ly: 288 },
-  retire: { d: "M654 170 L720 170", label: "retire", lx: 687, ly: 158 },
-};
+/** The path a set walks when nothing goes wrong. */
+const FLOW: { state: State; via?: Action }[] = [
+  { state: "draft" },
+  { state: "in_review", via: "submit" },
+  { state: "approved", via: "approve" },
+  { state: "published", via: "publish" },
+  { state: "retired", via: "retire" },
+];
 
-const NODE_W = 96;
-const NODE_H = 40;
+/** The transitions that leave that path, listed rather than drawn. */
+const SIDE_EDGES: Action[] = ["request_changes", "resubmit", "edit_after_approval", "revise"];
 
 function StateMachine({ current, lastAction, shakeKey }: { current: State; lastAction: Action | null; shakeKey: number }) {
   const reduced = useReducedMotion();
   return (
-    <motion.svg
+    <motion.div
       key={shakeKey}
-      viewBox="0 0 840 320"
-      className="sm"
-      role="img"
-      aria-label={`approval state machine, current state ${current.replace("_", " ")}`}
+      className="sm-diagram"
       initial={false}
       animate={shakeKey && !reduced ? { x: [0, -8, 8, -5, 5, 0] } : { x: 0 }}
       transition={{ duration: 0.45 }}
     >
-      <defs>
-        <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-          <path d="M0 0 L10 5 L0 10 z" fill="currentColor" />
-        </marker>
-        <marker id="arrow-hot" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-          <path d="M0 0 L10 5 L0 10 z" fill="#e04fd6" />
-        </marker>
-      </defs>
-      {(Object.keys(EDGE) as Action[]).map((action) => {
-        const edge = EDGE[action];
-        const legal = TRANSITIONS[action][0] === current;
-        const hot = action === lastAction;
-        return (
-          <g key={action} className={`sm-edge${legal ? " legal" : ""}${hot ? " hot" : ""}`}>
-            <path d={edge.d} fill="none" markerEnd={hot ? "url(#arrow-hot)" : "url(#arrow)"} />
-            {hot && !reduced ? (
-              <motion.path
-                d={edge.d}
-                fill="none"
-                className="sm-pulse"
-                initial={{ pathLength: 0, opacity: 1 }}
-                animate={{ pathLength: 1, opacity: [1, 1, 0] }}
-                transition={{ duration: 1.1, ease: "easeOut" }}
-              />
-            ) : null}
-            <text x={edge.lx} y={edge.ly} textAnchor="middle" className="sm-label">
-              {edge.label}
-            </text>
-          </g>
-        );
-      })}
-      {STATES.map((state) => {
-        const pos = NODE[state];
-        const active = state === current;
-        return (
-          <g key={state} className={`sm-node${active ? " active" : ""}`} transform={`translate(${pos.x - NODE_W / 2}, ${pos.y - NODE_H / 2})`}>
-            {active && !reduced ? (
-              <motion.rect
-                width={NODE_W}
-                height={NODE_H}
-                rx={20}
-                className="sm-halo"
-                initial={{ opacity: 0.6, scale: 1 }}
-                animate={{ opacity: [0.5, 0], scale: [1, 1.35] }}
-                transition={{ duration: 1.8, repeat: Infinity, ease: "easeOut" }}
-                style={{ originX: "50%", originY: "50%" }}
-              />
-            ) : null}
-            <rect width={NODE_W} height={NODE_H} rx={20} />
-            <text x={NODE_W / 2} y={NODE_H / 2 + 4} textAnchor="middle">
-              {state.replace("_", " ")}
-            </text>
-          </g>
-        );
-      })}
-    </motion.svg>
+      <ol className="sm-flow" aria-label={`approval states, currently ${current.replace("_", " ")}`}>
+        {FLOW.map(({ state, via }) => {
+          const legal = via ? TRANSITIONS[via][0] === current : false;
+          return (
+            <li key={state} className="sm-flow-item">
+              {via ? (
+                <span className={`sm-arrow${legal ? " legal" : ""}${via === lastAction ? " hot" : ""}`}>
+                  <span className="sm-arrow-mark" aria-hidden="true">
+                    &rarr;
+                  </span>
+                  {EDGE_LABEL[via]}
+                </span>
+              ) : null}
+              <span className={`sm-state${state === current ? " active" : ""}`}>
+                {state.replace("_", " ")}
+                {state === current ? <span className="sr-only"> (current state)</span> : null}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+      <ul className="sm-loops">
+        {SIDE_EDGES.map((action) => {
+          const [from, to] = TRANSITIONS[action];
+          return (
+            <li key={action} className={`sm-loop${from === current ? " legal" : ""}`}>
+              <span className="sm-loop-action">{EDGE_LABEL[action]}</span> takes {from.replace("_", " ")} to{" "}
+              {to.replace("_", " ")}
+            </li>
+          );
+        })}
+      </ul>
+    </motion.div>
   );
 }
 
@@ -274,10 +248,10 @@ export function ReviewSection() {
             <div className="diff-wrap">
               <div className="diff-head">
                 <span className="eyebrow">edit history</span>
-                <div className="diff-tabs" role="tablist" aria-label="edits">
+                <div className="diff-tabs" role="group" aria-label="edits">
                   {edits.length === 0 ? <span className="chip">no edits yet</span> : null}
                   {edits.map((e) => (
-                    <button key={e.id} type="button" role="tab" aria-selected={shownEdit?.id === e.id} className={`chip${shownEdit?.id === e.id ? " chip-plum" : ""}`} onClick={() => setOpenEdit(e.id)}>
+                    <button key={e.id} type="button" aria-pressed={shownEdit?.id === e.id} className={`chip${shownEdit?.id === e.id ? " chip-plum" : ""}`} onClick={() => setOpenEdit(e.id)}>
                       v{e.from_version} to v{e.to_version}
                     </button>
                   ))}

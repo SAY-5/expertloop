@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { compileNote, type Step } from "../sim/compile";
-import { runDemo, type DemoSummary } from "../sim/demo";
 import { SAMPLE_NOTES } from "../sim/fixtures";
+import { useWorld } from "../store";
 import { NotePaper } from "./NotePaper";
 
 function useCountUp(target: number, duration = 1400, delay = 200): number {
@@ -57,7 +57,8 @@ function citationLabel(step: Step): string {
 
 export function Hero() {
   const reduced = useReducedMotion();
-  const summary = useMemo<DemoSummary>(() => runDemo().summary, []);
+  const { demo } = useWorld();
+  const summary = demo.summary;
   const document = useMemo(() => compileNote(REFUND.body, 1, REFUND.title), []);
   const [phase, setPhase] = useState(0);
   const [cycle, setCycle] = useState(0);
@@ -146,6 +147,9 @@ export function Hero() {
               <Stat value={summary.publishes_blocked} label="publish blocked" delay={700} />
               <Stat value={summary.deliveries} label="deliveries" delay={850} />
             </motion.div>
+            <p className="hero-stat-note">
+              from the demo run, computed in this browser and compared with the README block in section 07
+            </p>
             <motion.div
               className="hero-actions"
               initial={reduced ? false : { opacity: 0, y: 10 }}

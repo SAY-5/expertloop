@@ -251,3 +251,10 @@
     margin-left: 0;
   }
 }
+
+.registry-note {
+  margin-top: 8px;
+  max-width: 62ch;
+  font-size: 0.86rem;
+  color: var(--text-dim);
+}

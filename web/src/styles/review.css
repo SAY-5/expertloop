@@ -197,75 +197,87 @@
   padding: 14px 16px 12px;
 }
 
-.sm {
-  width: 100%;
-  height: auto;
-  display: block;
+/* The states were an 840-unit-wide SVG whose 10px and 12.5px labels scaled down with the
+   column: about 7px at 1240px and about 4px on a phone. They are HTML now, so the text is
+   the browser's own and wraps instead of shrinking. */
+.sm-flow {
+  list-style: none;
+  margin: 0;
+  padding: 2px 0 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+}
+
+.sm-flow-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px 10px;
+}
+
+.sm-state {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: var(--ink-2);
+  color: var(--text-dim);
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.sm-state.active {
+  background: var(--plum);
+  border-color: #ffd7fb;
+  /* 5.70:1 on --plum */
+  color: #190a17;
+}
+
+.sm-arrow {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  font-family: var(--mono);
+  font-size: 0.74rem;
   color: var(--text-mute);
 }
 
-.sm-edge path {
-  stroke: currentColor;
-  stroke-width: 1.4;
-  opacity: 0.55;
+.sm-arrow-mark {
+  font-size: 0.95rem;
+  line-height: 1;
 }
 
-.sm-edge.legal path {
-  stroke: var(--plum);
-  opacity: 0.9;
-  stroke-width: 1.8;
+.sm-arrow.legal {
+  color: var(--plum);
 }
 
-.sm-edge.hot path {
-  stroke: var(--plum);
-  opacity: 1;
+.sm-arrow.hot {
+  color: var(--plum);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
-.sm-pulse {
-  stroke: #fff !important;
-  stroke-width: 3 !important;
-  filter: drop-shadow(0 0 6px var(--plum));
+.sm-loops {
+  list-style: none;
+  margin: 0;
+  padding: 10px 0 0;
+  border-top: 1px dashed var(--line);
+  display: grid;
+  gap: 5px;
+  font-size: 0.82rem;
+  color: var(--text-dim);
 }
 
-.sm-label {
+.sm-loop-action {
   font-family: var(--mono);
-  font-size: 10px;
-  fill: var(--text-mute);
-  letter-spacing: 0.04em;
+  font-size: 0.76rem;
+  color: var(--text-mute);
 }
 
-.sm-edge.legal .sm-label {
-  fill: var(--plum);
-}
-
-.sm-node rect {
-  fill: var(--ink-2);
-  stroke: var(--line-strong);
-  stroke-width: 1.2;
-}
-
-.sm-node text {
-  font-family: var(--body);
-  font-size: 12.5px;
-  font-weight: 600;
-  fill: var(--text-dim);
-}
-
-.sm-node.active rect {
-  fill: var(--plum);
-  stroke: #ffd7fb;
-}
-
-.sm-node.active text {
-  fill: #fff8fd;
-}
-
-.sm-halo {
-  fill: var(--plum);
-  stroke: none;
-  pointer-events: none;
-  transform-box: fill-box;
-  transform-origin: center;
+.sm-loop.legal .sm-loop-action {
+  color: var(--plum);
 }
 
 .sm-legend {

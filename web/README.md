@@ -33,12 +33,15 @@ below reads those files and compares them with what the port produces.
 ## Commands
 
 ```
-npm install
+npm ci
 npm run dev        # vite dev server
-npm run selfcheck  # 57 assertions over the ported simulation, exits non-zero on failure
+npm run selfcheck  # 61 assertions over the ported simulation, exits non-zero on failure
 npm run bundle     # typecheck and produce dist/ (alias of npm run build)
 npm run verify     # selfcheck followed by the bundle
 ```
+
+`npm run bundle` typechecks and produces `dist/`. The build this README was written against
+reported 481.71 kB of JavaScript (148.42 kB gzipped) and 34.68 kB of CSS (7.81 kB gzipped).
 
 `npm run selfcheck` is the important one: it asserts the SHA-256 and HMAC vectors, that each
 sample note compiles to the document the Python compiler produced and with every step cited,
