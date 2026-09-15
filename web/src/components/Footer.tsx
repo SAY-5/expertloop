@@ -16,8 +16,10 @@ export function Footer() {
             This page is a browser port of the real service: a FastAPI API over PostgreSQL with Alembic migrations,
             a deterministic note compiler, source drift detection, an approval state machine with review policies,
             step-level versioning with branches and merges, a rule-following executor and signed delivery targets.
-            The TypeScript in <code>web/src/sim</code> mirrors <code>expertloop/</code> module for module; the
-            numbers in the hero and in section 07 come from running the same demo script in memory.
+            The TypeScript in <code>web/src/sim</code> ports the compile, drift, review, versioning, gate and
+            delivery paths; the condition plugin registry, the coverage report and the ops overview stay in the
+            Python service. The numbers in the hero and in section 07 come from running that port in this
+            browser, and its compiler and executor fixtures are written by the Python test suite.
           </p>
           <p className="footer-links">
             <a href="https://github.com/SAY-5/expertloop" rel="noreferrer" target="_blank">

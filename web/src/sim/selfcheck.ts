@@ -19,6 +19,34 @@ import { assertTransition, IllegalTransition } from "./state";
 import { verifySignature } from "./targets";
 import { sha256, hmacSha256 } from "./sha256";
 import { type Conflict as MergeConflict } from "./versioning";
+import { runTestCase } from "./executor";
+import compiledIncident from "../../../samples/expected/compiled_incident.json";
+import compiledOnboarding from "../../../samples/expected/compiled_onboarding.json";
+import compiledRefund from "../../../samples/expected/compiled_refund.json";
+import goldenTraces from "../../../samples/expected/traces.json";
+
+/** Key order does not matter when comparing with a fixture the Python suite wrote. */
+function canonical(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonical);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.keys(value as Record<string, unknown>)
+        .sort()
+        .map((key) => [key, canonical((value as Record<string, unknown>)[key])]),
+    );
+  }
+  return value;
+}
+
+function sameAsFixture(produced: unknown, fixture: unknown): boolean {
+  return JSON.stringify(canonical(produced)) === JSON.stringify(canonical(fixture));
+}
+
+const COMPILED_FIXTURES: Record<string, unknown> = {
+  refund: compiledRefund,
+  onboarding: compiledOnboarding,
+  incident: compiledIncident,
+};
 
 export interface CheckResult {
   name: string;
@@ -57,6 +85,33 @@ export function selfCheck(): CheckResult[] {
   check(results, "refund step 3 outcome extracted", refundDoc.steps[2].expected_outcome === "warehouse scan present in OrderDB");
   check(results, "refund step 5 cites FIN-2210", refundDoc.steps[4].citations.some((c) => c.source_ref === "FIN-2210"));
   check(results, "refund tools detected", refundDoc.steps.map((s) => s.tool ?? "-").join(",") === "OrderDB,-,OrderDB,Stripe,Zendesk", refundDoc.steps.map((s) => s.tool ?? "-").join(","));
+
+  // --- the fixtures the Python compiler and executor wrote ------------------
+  for (const note of SAMPLE_NOTES) {
+    const produced = compileNote(note.body, 1, note.title);
+    check(
+      results,
+      `${note.short} compiles to the document the Python compiler produced`,
+      sameAsFixture(produced, COMPILED_FIXTURES[note.key]),
+      "samples/expected/compiled_" + note.key + ".json",
+    );
+  }
+  const traceFixtures = goldenTraces as Record<string, { name: string }[]>;
+  const traceMismatches: string[] = [];
+  for (const note of SAMPLE_NOTES) {
+    const document = compileNote(note.body, 1, note.title);
+    SAMPLE_TEST_CASES[note.key].forEach((testCase, index) => {
+      const expected = traceFixtures[note.key]?.[index];
+      const produced = { name: testCase.name, ...runTestCase(document, testCase.scenario, testCase.expectations) };
+      if (!sameAsFixture(produced, expected)) traceMismatches.push(`${note.key}[${index}] ${testCase.name}`);
+    });
+  }
+  check(
+    results,
+    "all eight case traces match the ones the Python executor produced",
+    traceMismatches.length === 0,
+    traceMismatches.join("; ") || "samples/expected/traces.json",
+  );
 
   const world = createWorld();
   registerSources(world);

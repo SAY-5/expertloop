@@ -119,13 +119,16 @@ records:
 
 ### Browser demo
 
-`web/` is a static site that runs the same platform in the browser: `web/src/sim/` is a pure
-TypeScript port of the packages under `expertloop/`, so the walkthrough drives the real
-compiler, drift check, state machine, executor and delivery targets rather than a mock. It
-covers citation coverage, stale sources, review policy and escalation, branch and merge
-conflicts, the publish gate and rollback, and replays the run above with the summary block
-printed here. `cd web && npm install && npm run verify` runs its 52 assertions and produces
-`dist/`; see `web/README.md`.
+`web/` is a static site that runs part of the platform in the browser. `web/src/sim/` is a
+TypeScript port of the compile, drift, review, versioning, gate and delivery paths, so the
+walkthrough executes those paths instead of replaying a recording; the executor condition
+plugin registry, the coverage report and `GET /ops/overview` are not ported. It covers
+citation coverage, stale sources, review policy and escalation, branch and merge conflicts,
+the publish gate and rollback, and replays the run above with the summary block printed
+here. The port is pinned to this repository by fixtures: `tests/test_golden.py` writes what
+the Python compiler and executor produce into `samples/expected/`, and the browser
+self-check reads those files and has to reproduce them. `cd web && npm ci && npm run verify`
+runs its 56 assertions and produces `dist/`; see `web/README.md`.
 
 ## API reference
 
@@ -223,9 +226,11 @@ expertloop/
   demo.py      end-to-end demo driver
 alembic/       migrations
 deploy/        docker-compose stack
-samples/       three expert notes used by the demo and tests
+samples/       three sample notes used by the demo and tests, and the compiler and
+               executor fixtures the browser port is checked against
 tests/         pytest suite (PostgreSQL via Testcontainers)
-web/           static browser demo (Vite, React, TypeScript port of the packages above)
+web/           static browser demo (Vite, React; ports the compile, drift, review,
+               versioning, gate and delivery paths)
 ```
 
 See `ARCHITECTURE.md` for the compiler, citation, state machine, gating and delivery
