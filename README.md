@@ -79,9 +79,10 @@ make demo       # compose up (api + postgres + fake targets), migrate, run the d
 make down       # stop the stack and drop its volume
 ```
 
-The API listens on `http://localhost:8090`, the fake webhook and Jira on
-`http://localhost:8081`. Default keys are in `.env.example`
-(`dana` expert, `ravi` and `mei` reviewers, `ops` admin).
+The demo API listens on `http://localhost:8090`, the fake webhook and Jira on
+`http://localhost:8081`. The demo Compose stack binds both services to loopback and
+explicitly configures public example keys (`dana` expert, `ravi` and `mei` reviewers,
+`ops` admin). Use these keys only for the local demo.
 
 ## Demo
 
@@ -213,6 +214,13 @@ Environment variables (prefix `EXPERTLOOP_`, see `.env.example`): `DATABASE_URL`
 `API_KEYS` (`name:role:key,...`), `WEBHOOK_URL`, `WEBHOOK_SECRET`, `JIRA_BASE_URL`,
 `JIRA_ISSUE_KEY`, `JIRA_TOKEN`, `DEFAULT_REQUIRED_APPROVALS`, `DRIFT_CHECK_INTERVAL_SECONDS`
 (0 disables the scheduled scan).
+
+The application has no default API keys: authenticated endpoints return `401` until
+`EXPERTLOOP_API_KEYS` is configured. Generate a separate random key for each identity
+(for example, `python -c 'import secrets; print(secrets.token_urlsafe(32))'`) and store
+the resulting `name:role:key,...` value in your deployment's secret configuration.
+An explicitly empty `api_keys=[]` passed to `create_app` also denies all authenticated
+access, even when other application instances have configured keys.
 
 ## Layout
 

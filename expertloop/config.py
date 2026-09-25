@@ -18,8 +18,8 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="EXPERTLOOP_", env_file=".env", extra="ignore")
 
     database_url: str = "postgresql+psycopg://expertloop:expertloop@localhost:5432/expertloop"
-    # name:role:key entries separated by commas
-    api_keys: str = "dana:expert:ek-dana,ravi:reviewer:rk-ravi,mei:reviewer:rk-mei,ops:admin:ak-ops"
+    # name:role:key entries separated by commas; absent keys deny authenticated access.
+    api_keys: str = ""
     webhook_url: str = "http://localhost:8081/webhook"
     webhook_secret: str = "change-me"
     jira_base_url: str = "http://localhost:8081/jira"
