@@ -1,3 +1,3 @@
 """ExpertLoop: expert task notes to agent instructions with linked sources."""
 
-__version__ = "5.0.1"
+__version__ = "5.1.0"
