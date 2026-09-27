@@ -275,11 +275,11 @@ design, and `CONTRIBUTING.md` for the development workflow.
 | 3.0.0 | Review policies and SLAs | Required reviewer roles, no self-approval, review deadlines with escalation events, `GET /reviews/workload` |
 | 4.0.0 | Diff and branching | Step-level diff between versions, branch a draft from a published version, merge back with conflict detection |
 | 5.0.0 | Plugins, coverage, ops | Executor condition plugin registry, test coverage report per set and per run, `GET /ops/overview` |
-| 5.1.0 | Typed documents and the browser demo | Pydantic document schema with provenance-checked citations, row locking on every write, idempotent delivery with an ADF Jira comment, golden compiler and executor fixtures, and the static browser demo in `web/` |
+| 5.1.0 | Typed documents, closed-by-default keys, browser demo | Pydantic document schema with provenance-checked citations, row locking on every write, idempotent delivery with an ADF Jira comment, no default API keys, golden compiler and executor fixtures, and the browser demo in `web/` extended to the drift, review, versioning, gate and delivery paths |
 
-Each release ships with its Alembic migration, tests against PostgreSQL, and a changelog
-entry below. Tags are `v1.0.0` through `v5.0.1`; 5.1.0 is the current head and is not tagged
-yet.
+Releases 1.0.0 through 5.0.0 each ship an Alembic migration (`0001` through `0005`);
+5.0.1 and 5.1.0 change no schema. Every release has tests against PostgreSQL and a
+changelog entry below. Tags are `v1.0.0` through `v5.1.0`.
 
 ## Changelog
 
@@ -300,10 +300,20 @@ yet.
   holds that version, posts the Jira comment as an Atlassian Document Format body, and audits
   a failed rollback.
 * Every service function that writes state takes a row lock on the instruction set.
+* Authentication has no default keys. `api_keys` ships empty instead of four documented
+  demo keys, `authenticate` checks only the keys configured for the running application,
+  and an unconfigured or explicitly empty list returns `401` from every authenticated
+  endpoint. The demo Compose stack passes its example keys explicitly and binds the API
+  and the fake targets to loopback.
 * `tests/test_golden.py` writes what the compiler and executor produce into
   `samples/expected/`, and the browser demo's self-check reproduces those files.
-* `web/` is a static browser demo of the compile, drift, review, versioning, gate and
-  delivery paths.
+* The static browser demo in `web/` gained the source drift, reviewer workload, versions
+  and merges, test gate and whole-run sections, so the port now covers the compile,
+  drift, review, versioning, gate and delivery paths; `web/README.md` lists what it
+  leaves out.
+* The demo's approval state machine is HTML rather than a scaled SVG, so its labels hold
+  their size at phone width, and the muted text tokens were adjusted to pass WCAG AA
+  contrast.
 
 ### 5.0.1
 
