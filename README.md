@@ -278,10 +278,16 @@ design, and `CONTRIBUTING.md` for the development workflow.
 | 5.1.0 | Typed documents, closed-by-default keys, browser demo | Pydantic document schema with provenance-checked citations, row locking on every write, idempotent delivery with an ADF Jira comment, no default API keys, golden compiler and executor fixtures, and the browser demo in `web/` extended to the drift, review, versioning, gate and delivery paths |
 
 Releases 1.0.0 through 5.0.0 each ship an Alembic migration (`0001` through `0005`);
-5.0.1 and 5.1.0 change no schema. Every release has tests against PostgreSQL and a
-changelog entry below. Tags are `v1.0.0` through `v5.1.0`.
+5.0.1, 5.1.0 and 5.1.1 change no schema. Every release has tests against PostgreSQL and a
+changelog entry below. Tags are `v1.0.0` through `v5.1.1`.
 
 ## Changelog
+
+### 5.1.1
+
+* Lockfile refresh past published advisories: certifi 2026.7.22 to 2026.10.19, urllib3
+  2.7.0 to 2.8.0 and mako 1.4.1 to 1.4.2 in `uv.lock`, and vite 6.4.3 to 6.4.5 and
+  source-map-js 1.2.1 to 1.2.2 in `web/package-lock.json`. No code or schema change.
 
 ### 5.1.0
 
